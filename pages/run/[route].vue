@@ -73,24 +73,25 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
 }
 </script>
 <template>
-  <p class="text-body-1">已选择路径 {{ target.pointName }}</p>
-  <p class="text-body-1 mt-2">请再次确认是否开跑</p>
-  <p class="text-body-1 mt-2">开跑时会向龙猫服务器发送请求，所以请尽量不要在开跑后取消</p>
+  <p class="text-body-1">已选择路径 {{ target.pointName }}</p >
+  <p class="text-body-1 mt-2">请再次确认是否开跑</p >
+  <p class="text-body-1 mt-2">开跑时会向龙猫服务器发送请求，所以请尽量不要在开跑后取消</p >
   <VBtn v-if="!runned && !running" color="primary my-4" append-icon="i-mdi-run" @click="handleRun">
     确认开跑
   </VBtn>
   <template v-if="running">
     <div class="d-flex justify-space-between mt-4">
-      <span>{{ timePassed }}/{{ needTime || 1 }}</span>  <!-- 避免除零 -->
-<span>{{ Math.ceil((timePassed / (needTime || 1)) * 100) || 100 }}%</span>  <!-- 瞬间 100% -->
-<VProgressLinear
-  v-if="timePassed"
-  color="primary"
-  :model-value="(timePassed / (needTime || 1)) * 100 || 100"
-  class="mt-2"
-/>
+      <span>{{ timePassed }}/{{ needTime || 1 }}</span>
+      <span>{{ Math.ceil((timePassed / (needTime || 1)) * 100) || 100 }}%</span>
+    </div>
+    <VProgressLinear
+      v-if="timePassed"
+      color="primary"
+      :model-value="(timePassed / (needTime || 1)) * 100 || 100"
+      class="mt-2"
+    />
   </template>
   <p v-if="runned" class="mt-4">
     <b>跑步完成，去 App 里看记录吧</b>
-  </p>
+  </p >
 </template>
