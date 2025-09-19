@@ -30,7 +30,7 @@ const handleRun = async () => {
     maxTime: sunRunPaper.value.maxTime,
   });
   startTime.value = now.value;
-  needTime.value = Number(targetTime) - Number(now.value);
+  needTime.value = 0;  // ← 修改：设为 0，避免等待
   endTime.value = targetTime;
   running.value = true;
 
@@ -40,22 +40,22 @@ const handleRun = async () => {
     stuNumber: session.value.stuNumber,
     token: session.value.token,
   });
-  setTimeout(async () => {
-    const res = await TotoroApiWrapper.sunRunExercises(req);
-    const runRoute = generateRoute(sunRunPaper.value.mileage, target.value);
-    await TotoroApiWrapper.sunRunExercisesDetail({
-      pointList: runRoute.mockRoute,
-      scantronId: res.scantronId,
-      breq: {
-        campusId: session.value.campusId,
-        schoolId: session.value.schoolId,
-        stuNumber: session.value.stuNumber,
-        token: session.value.token,
-      },
-    });
 
-    running.value = false;
-  }, needTime.value);
+  // ← 修改：立即执行提交（移出 setTimeout）
+  const res = await TotoroApiWrapper.sunRunExercises(req);
+  const runRoute = generateRoute(sunRunPaper.value.mileage, target.value);
+  await TotoroApiWrapper.sunRunExercisesDetail({
+    pointList: runRoute.mockRoute,
+    scantronId: res.scantronId,
+    breq: {
+      campusId: session.value.campusId,
+      schoolId: session.value.schoolId,
+      stuNumber: session.value.stuNumber,
+      token: session.value.token,
+    },
+  });
+
+  running.value = false;  // 立即完成
 };
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
@@ -81,15 +81,14 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
   </VBtn>
   <template v-if="running">
     <div class="d-flex justify-space-between mt-4">
-      <span>{{ timePassed }}/{{ needTime }}</span>
-      <span>{{ Math.ceil((timePassed / needTime) * 100) }}%</span>
-    </div>
-    <VProgressLinear
-      v-if="timePassed && needTime"
-      color="primary"
-      :model-value="(timePassed / needTime) * 100"
-      class="mt-2"
-    />
+      <span>{{ timePassed }}/{{ needTime || 1 }}</span>  <!-- 避免除零 -->
+<span>{{ Math.ceil((timePassed / (needTime || 1)) * 100) || 100 }}%</span>  <!-- 瞬间 100% -->
+<VProgressLinear
+  v-if="timePassed"
+  color="primary"
+  :model-value="(timePassed / (needTime || 1)) * 100 || 100"
+  class="mt-2"
+/>
   </template>
   <p v-if="runned" class="mt-4">
     <b>跑步完成，去 App 里看记录吧</b>
