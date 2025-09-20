@@ -18,7 +18,7 @@ const { route } = params as { route: string };
 const runned = computed(() => !running.value && !!needTime.value);
 const target = computed(() => sunRunPaper.value.runPointList.find((r) => r.pointId === route)!);
 const handleRun = async () => {
-  const { req, endTime: targetTime } = await generateRunReq({
+  const { req, endTime: targetTime, adjustedDistance } = await generateRunReq({  // ← 添加 adjustedDistance
     distance: sunRunPaper.value.mileage,
     routeId: target.value.pointId,
     taskId: target.value.taskId,
@@ -30,7 +30,7 @@ const handleRun = async () => {
     maxTime: sunRunPaper.value.maxTime,
   });
   startTime.value = now.value;
-  needTime.value = 0;  // ← 修改：设为 0，避免等待
+  needTime.value = Number(targetTime) - Number(now.value);
   endTime.value = targetTime;
   running.value = true;
 
@@ -41,9 +41,8 @@ const handleRun = async () => {
     token: session.value.token,
   });
 
-  // ← 修改：立即执行提交（移出 setTimeout）
   const res = await TotoroApiWrapper.sunRunExercises(req);
-  const runRoute = generateRoute(sunRunPaper.value.mileage, target.value);
+  const runRoute = generateRoute(adjustedDistance, target.value);  // ← 更新为 adjustedDistance
   await TotoroApiWrapper.sunRunExercisesDetail({
     pointList: runRoute.mockRoute,
     scantronId: res.scantronId,
@@ -55,7 +54,7 @@ const handleRun = async () => {
     },
   });
 
-  running.value = false;  // 立即完成
+  running.value = false;
 };
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
