@@ -44,7 +44,7 @@ const generateRunReq = async ({
 
   // ← 修改：随机增加 0.01-0.15 km
   const originalDistanceNum = Number(distance);  // 原里程，如 3.20
-  const randomIncrement = Math.random() * 0.14 + 0.01;  // 0.01 到 0.15
+  const randomIncrement = Math.random() * 0.05 + 0.01;  // 0.01 到 0.15
   const adjustedDistanceNum = originalDistanceNum + randomIncrement;
   const adjustedDistance = adjustedDistanceNum.toFixed(2);  // 如 "3.25"
 
