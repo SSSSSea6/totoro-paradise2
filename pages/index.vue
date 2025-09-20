@@ -39,10 +39,10 @@ const handleScanned = async () => {
 };
 </script>
 <template>
-  <p class="mt-6 text-center text-2xl font-bold text-white bg-primary px-4 py-2 rounded-lg inline-block">
+  <p class="mt-4 text-center text-2xl font-bold text-primary">
   “信息本该自由，学习本应简单。”
 </p >
-  <p class="mt-2 text-center">“本项目fork自BeiyanYunyi的项目，我稍作了一些修改,原项目在右上角。”</p>
+  <p class="mt-2 text-center">本项目fork自BeiyanYunyi的项目，我稍作了一些修改,原项目在右上角。</p>
   <VDivider class="my-4" />
   <div class="flex flex-col items-center gap-4">
     <p class="text-body-1 text-center">用微信扫码登录后点击“下一步”，稍等约10秒。</p>
