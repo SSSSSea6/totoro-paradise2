@@ -13,7 +13,7 @@ window.global = window;
 <template>
   <VApp>
     <VAppBar color="primary">
-  < img src="/logo.png" alt="logo" class="h-10 w-10 mr-2 ml-2" />
+  <VAppBarTitle>NUAA Guide</VAppBarTitle>
   <VAppBarTitle class="text-2xl font-bold flex-1 text-center">
     <NuxtLink to="/" class="no-underline text-white bg-green px-2 py-1 rounded-lg inline-block text-2xl gont-blod">
       龙猫乐园
