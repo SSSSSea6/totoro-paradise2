@@ -39,23 +39,23 @@ const handleScanned = async () => {
 };
 </script>
 <template>
-  <p class="text-subtitle-1">
-    本项目fork自BeiyanYunyi的项目（右上角），我稍作了一些修改。
-  </p>
-  <p class="mt-2 text-end">“信息本该自由，学习本应简单。”</p>
+  <p class="mt-6 text-center text-2xl font-bold text-white bg-primary px-4 py-2 rounded-lg inline-block">
+  “信息本该自由，学习本应简单。”
+</p >
+  <p class="mt-2 text-center">“本项目fork自BeiyanYunyi的项目，我稍作了一些修改,原项目在右上角。”</p>
   <VDivider class="my-4" />
-  <div class="flex flex-col gap-4">
-    <p class="text-body-1">用微信扫码登录后点击“下一步”，稍等几秒。</p>
+  <div class="flex flex-col items-center gap-4">
+    <p class="text-body-1 text-center">用微信扫码登录后点击“下一步”，稍等约10秒。</p>
     <VCard :height="200" :width="200">
       <img v-if="!message" :src="data!.imgUrl" class="w-100" referrerpolicy="no-referrer" />
       <div v-else class="h-100 w-100 flex items-center justify-center">
         {{ message }}
       </div>
     </VCard>
-    <div class="mt-2 flex">
+    <div class="mt-2 flex justify-center">
       <VBtn color="primary" append-icon="i-mdi-arrow-right" @click="handleScanned"> 下一步 </VBtn>
     </div>
-    <div class="absolute bottom-4 left-0 right-0 text-center text-gray-700 font-bold text-xl pre-wrap">
+    <div class="absolute bottom-12 left-0 right-0 text-center text-gray-700 font-bold text-xl pre-wrap">
   {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
 </div>
   </div>
