@@ -48,13 +48,13 @@ const handleScanned = async () => {
       <a href=" " target="_blank">
         <VIcon icon="mdi-github" size="large" class="text-gray-800 hover:text-black transition-colors duration-300" />
       </a >
-      <a href="https://github.com/原作者/龙猫校园跑" target="_blank">
+      <a href="https://github.com/BeiyanYunyi/totoro-paradise" target="_blank">
         <VIcon icon="mdi-github" size="large" class="text-gray-800 hover:text-black transition-colors duration-300" />
       </a >
     </div>
 
     <!-- 提醒语句 -->
-    <p class="text-body-1 text-gray-600 mb-4">本项目fork自BeiyanYunyi，我在原项目上稍作修改，增加了“跳过等待‘选项。</p >
+    <p class="text-body-1 text-gray-600 mb-4">本项目fork自BeiyanYunyi，我在原项目上稍作一些修改。</p >
 
     <!-- 简洁内容 -->
     <p class="text-body-1 mb-4">请用微信扫码登录后点击“下一步”，等待几秒。</p >
@@ -66,6 +66,11 @@ const handleScanned = async () => {
     </VCard>
     <div class="mt-4">
       <VBtn color="primary" append-icon="i-mdi-arrow-right" @click="handleScanned"> 下一步 </VBtn>
+    </div>
+
+    <!-- 保留诗句：最下方醒目、粗体、大字体 -->
+    <div class="absolute bottom-4 left-0 right-0 text-center text-gray-700 font-bold text-xl pre-wrap">
+      {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
     </div>
   </div>
 </template>
