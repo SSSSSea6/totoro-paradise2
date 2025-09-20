@@ -64,6 +64,10 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
+const goBackSite = () => {
+  window.location.href = "https://nuaaguide.online/";
+}
+  
 function handleBeforeUnload(e: BeforeUnloadEvent) {
   if (running.value && !runned.value) {
     e.preventDefault();
@@ -91,6 +95,14 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
     />
   </template>
   <p v-if="runned" class="mt-4">
-    <b>跑步完成，去 App 里看记录吧</b>
-  </p >
+  <b>跑步完成，去 App 里看记录吧</b>
+</p >
+<VBtn
+  v-if="runned"
+  color="secondary"
+  class="mt-4"
+  @click="goBackSite"
+>
+  返回原网站
+</VBtn>
 </template>
