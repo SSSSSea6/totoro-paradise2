@@ -40,12 +40,12 @@ const handleScanned = async () => {
 </script>
 <template>
   <p class="text-subtitle-1">
-    古典时代的人发现人体是权力的对象和目标。……这种人体是被操纵、被塑造、被规训的。它服从，配合，变得灵巧、强壮。“人是机器”这部大书是在两个领域被同时撰写的。
+    本项目fork自BeiyanYunyi的项目（右上角），我稍作了一些修改。
   </p>
-  <p class="mt-2 text-end">—— 米歇尔·福柯《规训与惩罚》</p>
+  <p class="mt-2 text-end">“信息本该自由，学习本应简单。”</p>
   <VDivider class="my-4" />
   <div class="flex flex-col gap-4">
-    <p class="text-body-1">请用微信扫码，扫码后点击“下一步”按钮</p>
+    <p class="text-body-1">用微信扫码登录后点击“下一步”，稍等几秒。</p>
     <VCard :height="200" :width="200">
       <img v-if="!message" :src="data!.imgUrl" class="w-100" referrerpolicy="no-referrer" />
       <div v-else class="h-100 w-100 flex items-center justify-center">
