@@ -13,20 +13,25 @@ window.global = window;
 <template>
   <VApp>
     <VAppBar color="primary">
-      <VAppBarTitle>龙猫乐园</VAppBarTitle>
-      <template #append>
-        <VAppBarNavIcon
-          v-ripple icon="i-mdi-github" href="https://github.com/BeiyanYunyi/totoro-paradise"
-          rel="noreferrer noopener" target="_blank"
-        />
-      </template>
-    </VAppBar>
+  < img src="/logo.png" alt="logo" class="h-10 w-10 mr-2 ml-2" />
+  <VAppBarTitle class="text-2xl font-bold flex-1 text-center">
+    <NuxtLink to="/" class="no-underline text-white">
+      龙猫乐园
+    </NuxtLink>
+  </VAppBarTitle>
+  <template #append>
+    <VAppBarNavIcon
+      v-ripple icon="i-mdi-github" href="https://github.com/BeiyanYunyi/totoro-paradise"
+      rel="noreferrer noopener" target="_blank"
+    />
+  </template>
+</VAppBar>
     <VMain>
       <div class="p-4">
         <NuxtPage />
-        <p class="mt-4 text-xs">
+        <!--p class="mt-4 text-xs">
           Powered by totoro-paradise v{{ appConfig.version }}
-        </p>
+        </p> -->
       </div>
     </VMain>
   </VApp>
