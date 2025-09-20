@@ -55,8 +55,8 @@ const handleScanned = async () => {
     <div class="mt-2 flex">
       <VBtn color="primary" append-icon="i-mdi-arrow-right" @click="handleScanned"> 下一步 </VBtn>
     </div>
-    <div class="text-sm pre-wrap">
-      {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
-    </div>
+    <div class="absolute bottom-4 left-0 right-0 text-center text-gray-700 font-bold text-xl pre-wrap">
+  {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
+</div>
   </div>
 </template>
