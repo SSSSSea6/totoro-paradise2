@@ -103,6 +103,6 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
   class="mt-4"
   @click="goBackSite"
 >
-  返回原网站
+  返回 NUAA Guide
 </VBtn>
 </template>
