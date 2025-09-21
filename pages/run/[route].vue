@@ -17,6 +17,7 @@ const session = useSession();
 const { route } = params as { route: string };
 const runned = computed(() => !running.value && !!needTime.value);
 const target = computed(() => sunRunPaper.value.runPointList.find((r) => r.pointId === route)!);
+const skipWaiting = ref(false);  // 新增：是否跳过  
 const handleRun = async () => {
   const { req, endTime: targetTime, adjustedDistance } = await generateRunReq({  // ← 添加 adjustedDistance
     distance: sunRunPaper.value.mileage,
@@ -40,7 +41,7 @@ const handleRun = async () => {
     stuNumber: session.value.stuNumber,
     token: session.value.token,
   });
-
+  const submitRun = async () => {  // 新增：提取提交逻辑
   const res = await TotoroApiWrapper.sunRunExercises(req);
   const runRoute = generateRoute(adjustedDistance, target.value);  // ← 更新为 adjustedDistance
   await TotoroApiWrapper.sunRunExercisesDetail({
@@ -55,6 +56,16 @@ const handleRun = async () => {
   });
 
   running.value = false;
+};
+  if (skipWaiting.value) {
+    await submitRun();  // 立即提交
+  } else {
+    setTimeout(submitRun, needTime.value);  // 默认等待
+  }
+};
+
+const handleSkip = () => {
+  skipWaiting.value = true;
 };
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
@@ -93,6 +104,14 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
       :model-value="(timePassed / (needTime || 1)) * 100 || 100"
       class="mt-2"
     />
+    <VBtn
+      v-if="!skipWaiting"
+      color="warning"
+      class="mt-4"
+      @click="handleSkip"
+    >
+      跳过等待
+    </VBtn>
   </template>
   <p v-if="runned" class="mt-4">
   <b>跑步完成，去 App 里看记录吧</b>
