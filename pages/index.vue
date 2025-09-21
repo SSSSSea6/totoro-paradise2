@@ -60,5 +60,4 @@ const handleScanned = async () => {
         {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
       </div>
     </div>
-  </div>
 </template>
