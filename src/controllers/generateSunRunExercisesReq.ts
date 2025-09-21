@@ -43,12 +43,12 @@ const generateRunReq = async ({
   const endTime = new Date(Number(startTime) + waitSecond * 1000);
 
   // ← 修改：随机增加 0.01-0.15 km
-  const originalDistanceNum = Number(distance);  // 原里程，如 3.20
-  const randomIncrement = Math.random() * 0.05 + 0.01;  // 0.01 到 0.15
+  const originalDistanceNum = Number(distance);  
+  const randomIncrement = Math.random() * 0.05 + 0.01;  
   const adjustedDistanceNum = originalDistanceNum + randomIncrement;
-  const adjustedDistance = adjustedDistanceNum.toFixed(2);  // 如 "3.25"
+  const adjustedDistance = adjustedDistanceNum.toFixed(2); 
 
-  const avgSpeed = (adjustedDistanceNum / (waitSecond / 3600)).toFixed(2);  // 更新速度基于新里程
+  const avgSpeed = (adjustedDistanceNum / (waitSecond / 3600)).toFixed(2);  
   const duration = intervalToDuration({ start: startTime, end: endTime });
   const mac = await generateMac(stuNumber);
   const req: SunRunExercisesRequest = {
@@ -61,7 +61,7 @@ const generateRunReq = async ({
     flag: '1',
     headImage: '',
     ifLocalSubmit: '0',
-    km: adjustedDistance,  // ← 更新为新里程
+    km: adjustedDistance,  
     mac,
     phoneInfo: '$CN11/iPhone15,4/17.4.1',
     phoneNumber: '',
@@ -80,7 +80,7 @@ const generateRunReq = async ({
     warnType: '',
     faceData: '',
   };
-  return { req, endTime, adjustedDistance };  // ← 返回新里程，用于路径生成
+  return { req, endTime, adjustedDistance };  
 };
 
 export default generateRunReq;
