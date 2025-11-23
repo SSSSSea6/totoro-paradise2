@@ -15,6 +15,7 @@ const needTime = ref(0);
 const running = ref(false);
 const isSubmitting = ref(false);
 const isRemoteProcessing = ref(false);
+const submittedToQueue = ref(false);
 const statusMessage = ref('');
 const resultLog = ref('');
 const taskId = ref<number | null>(null);
@@ -112,10 +113,12 @@ const submitJobToQueue = async () => {
       subscribeToTaskUpdates(data.taskId);
     } else {
       statusMessage.value = `提交失败: ${data.error || '未知错误'}`;
+      submittedToQueue.value = false;
     }
   } catch (error) {
     statusMessage.value = '网络请求失败';
     resultLog.value = (error as Error).message;
+    submittedToQueue.value = false;
   } finally {
     isSubmitting.value = false;
   }
@@ -175,6 +178,7 @@ const handleRun = async () => {
   resultLog.value = '';
 
   if (supabaseEnabled.value && supabase) {
+    submittedToQueue.value = true;
     await submitJobToQueue();
   } else {
     await runLocally();
@@ -206,13 +210,14 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
   <p class="text-body-1 mt-2">请再次确认是否开跑</p>
   <p class="text-body-1 mt-2">开跑时会向龙猫服务器发送请求，所以请尽量不要在开跑后取消</p>
   <VBtn
+    v-if="!(supabaseEnabled && submittedToQueue)"
     color="primary my-4"
     append-icon="i-mdi-run"
     :loading="isBusy"
     :disabled="isBusy"
     @click="handleRun"
   >
-    {{ supabaseEnabled ? '提交到队列' : '确认开跑' }}
+    {{ supabaseEnabled ? "提交到队列" : "确认开跑" }}
   </VBtn>
   <VAlert v-if="statusMessage" type="info" variant="tonal" class="mt-2">
     {{ statusMessage }}
