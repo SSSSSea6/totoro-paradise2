@@ -3,8 +3,10 @@ import type { HTTPError } from 'ky';
 import type BasicRequest from '~/src/types/requestTypes/BasicRequest';
 import TotoroApiWrapper from '~/src/wrappers/TotoroApiWrapper';
 import normalizeSession from '~/src/utils/normalizeSession';
-import poem from '~/src/data/poem.json';
 
+const route = useRoute();
+const router = useRouter();
+const redirect = computed(() => (route.query.redirect as string) || '/scanned');
 const { data, refresh, pending } = await useFetch<{ uuid: string; imgUrl: string }>(
   '/api/scanQr',
 );
@@ -12,17 +14,6 @@ const message = ref('');
 const snackbar = ref(false);
 const isLoading = ref(false);
 const session = useSession();
-
-const hydratedSession = computed(() => normalizeSession(session.value || {}));
-const isLoggedIn = computed(
-  () =>
-    Boolean(hydratedSession.value?.token) &&
-    Boolean(hydratedSession.value?.stuNumber) &&
-    Boolean(hydratedSession.value?.stuName),
-);
-const polling = ref(false);
-const pollTimer = ref<ReturnType<typeof setInterval> | null>(null);
-const router = useRouter();
 
 const isKyHttpError = (error: unknown): error is HTTPError =>
   !!error &&
@@ -38,9 +29,15 @@ const runPostLoginPrefetch = (req: BasicRequest) => {
     { label: 'getAppNotice', run: () => TotoroApiWrapper.getAppNotice(req) },
   ];
 
-  Promise.allSettled(optionalCalls.map(({ run }) => run())).catch((error) =>
-    console.error('[totoro-prefetch] unexpected failure', error),
-  );
+  Promise.allSettled(optionalCalls.map(({ run }) => run()))
+    .then((results) => {
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.warn(`[totoro-prefetch] ${optionalCalls[index]!.label} failed`, result.reason);
+        }
+      });
+    })
+    .catch((error) => console.error('[totoro-prefetch] unexpected failure', error));
 };
 
 const fireAndForgetAppAd = (code: string) => {
@@ -50,9 +47,8 @@ const fireAndForgetAppAd = (code: string) => {
 };
 
 const handleScanned = async () => {
-  if (isLoading.value || isLoggedIn.value) return;
+  if (isLoading.value) return;
   message.value = '';
-  snackbar.value = false;
 
   const uuid = data.value?.uuid;
   if (!uuid) {
@@ -83,11 +79,7 @@ const handleScanned = async () => {
     }
 
     const personalInfo = await TotoroApiWrapper.login({ token: lesseeServer.token });
-    const normalized = normalizeSession({
-      ...personalInfo,
-      token: lesseeServer.token,
-      code: scanRes.code,
-    });
+    const normalized = normalizeSession({ ...personalInfo, token: lesseeServer.token, code: scanRes.code });
     session.value = normalized as any;
 
     const breq: BasicRequest = {
@@ -96,10 +88,9 @@ const handleScanned = async () => {
       schoolId: personalInfo.schoolId,
       stuNumber: personalInfo.stuNumber,
     };
-    runPostLoginPrefetch(breq);
 
-    message.value = '登录成功，可选择入口';
-    snackbar.value = true;
+    runPostLoginPrefetch(breq);
+    await router.push(redirect.value);
   } catch (error) {
     console.error('[totoro-login] handleScanned failed', error);
     if (isKyHttpError(error)) {
@@ -118,100 +109,31 @@ const handleScanned = async () => {
     isLoading.value = false;
   }
 };
-
-const startPolling = () => {
-  if (pollTimer.value) return;
-  polling.value = true;
-  pollTimer.value = setInterval(() => {
-    if (isLoggedIn.value || isLoading.value) return;
-    handleScanned();
-  }, 3000);
-};
-
-const stopPolling = () => {
-  if (pollTimer.value) {
-    clearInterval(pollTimer.value);
-    pollTimer.value = null;
-  }
-  polling.value = false;
-};
-
-onMounted(() => {
-  session.value = {};
-  startPolling();
-});
-
-onUnmounted(() => {
-  stopPolling();
-});
-
-watch(
-  () => isLoggedIn.value,
-  (loggedIn) => {
-    if (loggedIn) stopPolling();
-    else startPolling();
-  },
-);
-
-const goSunRun = () => {
-  if (!isLoggedIn.value) {
-    snackbar.value = true;
-    message.value = '请先扫码登录';
-    return;
-  }
-  router.push('/scanned');
-};
-
-const goMornSign = () => {
-  if (!isLoggedIn.value) {
-    snackbar.value = true;
-    message.value = '请先扫码登录';
-    return;
-  }
-  router.push('/mornsign');
-};
 </script>
 <template>
   <div class="flex flex-col items-center gap-4 py-10">
-    <h1 class="text-2xl font-bold text-primary">信息本该自由，学习本应简单</h1>
-    <p class="text-center text-red-500">在每天22:50后提交跑步会失败。</p>
+    <h1 class="text-2xl font-bold text-primary">扫码登录 Totoro</h1>
+    <p class="text-body-2 text-gray-600">微信扫码后点击“下一步”，等待约 10 秒即可。</p>
     <VCard :height="220" :width="220" class="flex items-center justify-center">
       <img v-if="data?.imgUrl" :src="data.imgUrl" class="w-100" referrerpolicy="no-referrer" />
       <div v-else class="text-center text-body-2 text-gray-500">正在加载二维码...</div>
     </VCard>
     <div class="flex items-center gap-3">
+      <VBtn
+        color="primary"
+        append-icon="i-mdi-arrow-right"
+        :loading="isLoading"
+        :disabled="isLoading"
+        @click="handleScanned"
+      >
+        下一步
+      </VBtn>
       <VBtn variant="text" color="secondary" :loading="pending" @click="refresh">
         刷新二维码
       </VBtn>
-      <VChip v-if="polling" color="primary" variant="tonal" size="small">自动检测中</VChip>
     </div>
-    <VDivider class="w-2/3 my-4" />
-    <div class="grid w-full max-w-xl gap-3 sm:grid-cols-2">
-      <VBtn
-        color="orange"
-        block
-        height="56"
-        :disabled="!isLoggedIn"
-        append-icon="i-mdi-run"
-        @click="goSunRun"
-      >
-        阳光跑
-      </VBtn>
-      <VBtn
-        color="blue"
-        block
-        height="56"
-        :disabled="true"
-        append-icon="i-mdi-calendar-check"
-      >
-        敬请期待
-      </VBtn>
-    </div>
-    <div v-if="!isLoggedIn" class="text-caption text-gray-500">
-      未登录时入口按钮会置灰，请先扫码等待自动登录。
-    </div>
-    <div class="mt-4 text-center text-gray-700 font-bold text-xl whitespace-pre-line">
-      {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
+    <div class="text-caption text-gray-500">
+      登录成功后将自动跳转到 {{ redirect }}
     </div>
     <VSnackbar v-model="snackbar" :timeout="3000">
       {{ message }}

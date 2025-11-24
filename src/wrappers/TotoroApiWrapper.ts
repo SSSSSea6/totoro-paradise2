@@ -1,5 +1,6 @@
 import ky from 'ky';
 import type { Point } from '../types/RunPoint';
+import type SubmitMornSignRequest from '../types/requestTypes/SubmitMornSignRequest';
 import type BasicRequest from '../types/requestTypes/BasicRequest';
 import type GetSchoolMonthByTermRequest from '../types/requestTypes/GetSchoolMonthByTermRequest';
 import type GetSchoolTermRequest from '../types/requestTypes/GetSchoolTermRequest';
@@ -20,9 +21,11 @@ import type GetSchoolTermResponse from '../types/responseTypes/GetSchoolTermResp
 import type GetSunRunArchDetailResponse from '../types/responseTypes/GetSunRunArchDetailResponse';
 import type GetSunRunArchResponse from '../types/responseTypes/GetSunRunArchResponse';
 import type GetSunRunPaperResponse from '../types/responseTypes/GetSunRunPaperResponse';
+import type GetMornSignPaperResponse from '../types/responseTypes/GetMornSignPaperResponse';
 import type LoginResponse from '../types/responseTypes/LoginResponse';
 import type SunRunExercisesDetailResponse from '../types/responseTypes/SunRunExercisesDetailResponse';
 import type SunRunExercisesResponse from '../types/responseTypes/SunRunExercisesResponse';
+import type SubmitMorningExercisesResponse from '../types/responseTypes/SubmitMorningExercisesResponse';
 import type UpdateAppVersionResponse from '../types/responseTypes/UpdateAppVersionResponse';
 import encryptRequestContent from '../utils/encryptRequestContent';
 
@@ -212,6 +215,20 @@ const TotoroApiWrapper = {
       .post('sunrun/getSunrunArchDetail', {
         body: encryptRequestContent(req),
       })
+      .json();
+  },
+
+  async getMornSignPaper(req: BasicRequest): Promise<GetMornSignPaperResponse> {
+    return this.client
+      .post('mornsign/getMornSignPaper', { body: encryptRequestContent(req) })
+      .json();
+  },
+
+  async submitMorningExercises(
+    req: SubmitMornSignRequest,
+  ): Promise<SubmitMorningExercisesResponse> {
+    return this.client
+      .post('platform/recrecord/morningExercises', { body: encryptRequestContent(req) })
       .json();
   },
 };
