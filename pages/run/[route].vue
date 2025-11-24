@@ -20,6 +20,9 @@ const statusMessage = ref('');
 const resultLog = ref('');
 const taskId = ref<number | null>(null);
 const realtimeChannel = ref<RealtimeChannel | null>(null);
+const queueCount = ref<number | null>(null);
+const estimatedWaitMs = ref<number | null>(null);
+const isQueueLoading = ref(false);
 
 const sunRunPaper = useSunRunPaper();
 const { params } = useRoute();
@@ -38,6 +41,36 @@ const cleanupRealtime = () => {
   if (supabase && realtimeChannel.value) {
     supabase.removeChannel(realtimeChannel.value);
     realtimeChannel.value = null;
+  }
+};
+
+const formatWait = (ms: number | null) => {
+  if (!ms || ms <= 0) return '≈0秒';
+  const totalSec = Math.ceil(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  if (min === 0) return `≈${sec}秒`;
+  return `≈${min}分${sec}秒`;
+};
+
+const refreshQueueEstimate = async () => {
+  if (!supabase) return;
+  isQueueLoading.value = true;
+  try {
+    const { count, error } = await supabase
+      .from('Tasks')
+      .select('id', { head: true, count: 'exact' })
+      .eq('status', 'PENDING');
+    if (error) throw error;
+    queueCount.value = count ?? 0;
+    // 粗略估算：每个任务约 2.8 秒
+    estimatedWaitMs.value = (count ?? 0) * 2.8 * 1000;
+  } catch (error) {
+    console.warn('[queue-estimate] failed', error);
+    queueCount.value = null;
+    estimatedWaitMs.value = null;
+  } finally {
+    isQueueLoading.value = false;
   }
 };
 
@@ -179,6 +212,9 @@ const handleRun = async () => {
 
   if (supabaseEnabled.value && supabase) {
     submittedToQueue.value = true;
+    if (!queueCount.value && !isQueueLoading.value) {
+      refreshQueueEstimate();
+    }
     await submitJobToQueue();
   } else {
     await runLocally();
@@ -187,6 +223,9 @@ const handleRun = async () => {
 
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
+  if (supabaseEnabled.value && supabase) {
+    refreshQueueEstimate();
+  }
 });
 
 onUnmounted(() => {
@@ -209,6 +248,12 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
   <p class="text-body-1">已选择路径 {{ target.pointName }}</p>
   <p class="text-body-1 mt-2">请再次确认是否开跑</p>
   <p class="text-body-1 mt-2">开跑时会向龙猫服务器发送请求，所以请尽量不要在开跑后取消</p>
+  <p v-if="supabaseEnabled" class="text-body-2 text-gray-600">
+    预计等待：
+    <span v-if="isQueueLoading">计算中...</span>
+    <span v-else>{{ formatWait(estimatedWaitMs) }}</span>
+    <span v-if="queueCount !== null">（队列约 {{ queueCount }} 人）</span>
+  </p>
   <VBtn
     v-if="!(supabaseEnabled && submittedToQueue)"
     color="primary my-4"
