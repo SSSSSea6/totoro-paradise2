@@ -48,7 +48,7 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
   };
 };
 
-export const runDueMorningTasks = async (limit = 10): Promise<ProcessResult> => {
+export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> => {
   if (!isSupabaseConfigured()) {
     return { processed: 0, success: 0, failed: 0 };
   }

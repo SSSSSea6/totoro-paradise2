@@ -201,10 +201,11 @@ const goMornSign = () => {
         color="blue"
         block
         height="56"
-        :disabled="true"
+        :disabled="!isLoggedIn"
         append-icon="i-mdi-calendar-check"
+        @click="goMornSign"
       >
-        敬请期待
+        早操签到
       </VBtn>
     </div>
     <div v-if="!isLoggedIn" class="text-caption text-gray-500">
