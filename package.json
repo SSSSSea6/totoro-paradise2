@@ -6,6 +6,7 @@
   "author": "BeiyanYunyi & Clansty",
   "license": "AGPL-3.0-or-later",
   "scripts": {
+    "prebuild": "node scripts/ensure-supabase-constants.mjs",
     "start": "node .output/server/index.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev",
