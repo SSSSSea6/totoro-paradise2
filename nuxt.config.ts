@@ -16,7 +16,15 @@ export default defineNuxtConfig({
     },
   },
   build: {
-    transpile: ['vuetify'],
+    transpile: [
+      'vuetify',
+      '@supabase/supabase-js',
+      '@supabase/realtime-js',
+      '@supabase/auth-js',
+      '@supabase/functions-js',
+      '@supabase/postgrest-js',
+      '@supabase/storage-js',
+    ],
   },
   modules: [
     '@unocss/nuxt',
