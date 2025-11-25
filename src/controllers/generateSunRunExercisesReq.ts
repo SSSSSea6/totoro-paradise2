@@ -42,6 +42,13 @@ const generateRunReq = async ({
   const startTime = new Date();
   const endTime = new Date(Number(startTime) + waitSecond * 1000);
 
+  // 转为东八区时间用于上报（避免服务器 UTC 导致时间显示为上午）
+  const targetOffsetMinutes = 8 * 60; // Asia/Shanghai
+  const currentOffsetMinutes = -startTime.getTimezoneOffset(); // 当前环境的时区偏移（分钟）
+  const diffMinutes = targetOffsetMinutes - currentOffsetMinutes;
+  const localStart = new Date(startTime.getTime() + diffMinutes * 60_000);
+  const localEnd = new Date(endTime.getTime() + diffMinutes * 60_000);
+
   // ← 修改：随机增加 0.01-0.15 km
   const originalDistanceNum = Number(distance);  
   const randomIncrement = Math.random() * 0.05 + 0.01;  
@@ -49,14 +56,14 @@ const generateRunReq = async ({
   const adjustedDistance = adjustedDistanceNum.toFixed(2); 
 
   const avgSpeed = (adjustedDistanceNum / (waitSecond / 3600)).toFixed(2);  
-  const duration = intervalToDuration({ start: startTime, end: endTime });
+  const duration = intervalToDuration({ start: localStart, end: localEnd });
   const mac = await generateMac(stuNumber);
   const req: SunRunExercisesRequest = {
     LocalSubmitReason: '',
     avgSpeed,
     baseStation: '',
-    endTime: format(endTime, 'HH:mm:ss'),
-    evaluateDate: format(endTime, 'yyyy-MM-dd HH:mm:ss'),
+    endTime: format(localEnd, 'HH:mm:ss'),
+    evaluateDate: format(localEnd, 'yyyy-MM-dd HH:mm:ss'),
     fitDegree: '1',
     flag: '1',
     headImage: '',
@@ -69,7 +76,7 @@ const generateRunReq = async ({
     routeId,
     runType: '0',
     sensorString: '',
-    startTime: format(startTime, 'HH:mm:ss'),
+    startTime: format(localStart, 'HH:mm:ss'),
     steps: `${1000 + Math.floor(Math.random() * 1000)}`,
     stuNumber,
     taskId,
