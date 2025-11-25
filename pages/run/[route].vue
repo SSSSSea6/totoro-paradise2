@@ -33,9 +33,7 @@ const target = computed(() => sunRunPaper.value.runPointList.find((r) => r.point
 const supabaseEnabled = computed(() => supabaseReady && Boolean(supabase));
 const isBusy = computed(() => running.value || isSubmitting.value || isRemoteProcessing.value);
 const isSuccess = computed(() => runned.value || statusMessage.value.startsWith('🎉'));
-const hasTerminalStatus = computed(
-  () => isSuccess.value || statusMessage.value.startsWith('❌'),
-);
+const hasTerminalStatus = computed(() => isSuccess.value || statusMessage.value.startsWith('任务'));
 
 const cleanupRealtime = () => {
   if (supabase && realtimeChannel.value) {
@@ -45,12 +43,12 @@ const cleanupRealtime = () => {
 };
 
 const formatWait = (ms: number | null) => {
-  if (!ms || ms <= 0) return '≈0秒';
+  if (!ms || ms <= 0) return '未知';
   const totalSec = Math.ceil(ms / 1000);
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
-  if (min === 0) return `≈${sec}秒`;
-  return `≈${min}分${sec}秒`;
+  if (min === 0) return `${sec}秒`;
+  return `${min}分${sec}秒`;
 };
 
 const refreshQueueEstimate = async () => {
@@ -63,7 +61,6 @@ const refreshQueueEstimate = async () => {
       .eq('status', 'PENDING');
     if (error) throw error;
     queueCount.value = count ?? 0;
-    // 粗略估算：每个任务约 2.8 秒
     estimatedWaitMs.value = (count ?? 0) * 2.8 * 1000;
   } catch (error) {
     console.warn('[queue-estimate] failed', error);
@@ -84,13 +81,13 @@ const handleStatusUpdate = (task: { status: string; result_log?: string }) => {
   }
   if (task.status === 'SUCCESS') {
     isRemoteProcessing.value = false;
-    statusMessage.value = '🎉 任务成功完成！';
+    statusMessage.value = '🎉 任务成功完成。';
     cleanupRealtime();
     return;
   }
   if (task.status === 'FAILED') {
     isRemoteProcessing.value = false;
-    statusMessage.value = '❌ 任务执行失败。';
+    statusMessage.value = '任务执行失败。';
     cleanupRealtime();
   }
 };
@@ -141,7 +138,7 @@ const submitJobToQueue = async () => {
 
     if (response.status === 202 && data.success) {
       taskId.value = data.taskId;
-      statusMessage.value = '任务已提交，等待实时更新...';
+      statusMessage.value = '任务已提交，无需等待，可直接退出，稍后查看进度。';
       handleStatusUpdate({ status: 'PENDING', result_log: '' });
       subscribeToTaskUpdates(data.taskId);
     } else {
@@ -195,7 +192,7 @@ const runLocally = async () => {
       },
     });
 
-    statusMessage.value = '🎉 跑步完成，请在 App 里查看记录';
+    statusMessage.value = '🎉 跑步完成，请到 App 里查看记录。';
     resultLog.value = '本地模式已完成，无需队列。';
   } catch (error) {
     statusMessage.value = '任务执行失败';
@@ -244,16 +241,12 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
   }
 }
 </script>
+
 <template>
   <p class="text-body-1">已选择路径 {{ target.pointName }}</p>
   <p class="text-body-1 mt-2">请再次确认是否开跑</p>
   <p class="text-body-1 mt-2">开跑时会向龙猫服务器发送请求，所以请尽量不要在开跑后取消</p>
-  <p v-if="supabaseEnabled" class="text-body-2 text-gray-600">
-    预计等待：
-    <span v-if="isQueueLoading">计算中...</span>
-    <span v-else>{{ formatWait(estimatedWaitMs) }}</span>
-    <span v-if="queueCount !== null">（队列约 {{ queueCount }} 人）</span>
-  </p>
+
   <VBtn
     v-if="!(supabaseEnabled && submittedToQueue)"
     color="primary my-4"
@@ -262,12 +255,14 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
     :disabled="isBusy"
     @click="handleRun"
   >
-    {{ supabaseEnabled ? "提交到队列" : "确认开跑" }}
+    {{ supabaseEnabled ? '提交到队列' : '确认开跑' }}
   </VBtn>
+
   <VAlert v-if="statusMessage" type="info" variant="tonal" class="mt-2">
     {{ statusMessage }}
   </VAlert>
   <p v-if="resultLog" class="mt-2 text-body-2">任务日志：{{ resultLog }}</p>
+
   <template v-if="running">
     <div class="d-flex justify-space-between mt-4">
       <span>{{ timePassed }}/{{ needTime || 1 }}</span>
@@ -280,8 +275,9 @@ function handleBeforeUnload(e: BeforeUnloadEvent) {
       class="mt-2"
     />
   </template>
+
   <p v-if="isSuccess" class="mt-4">
-    <b>跑步完成，去 App 里看记录吧</b>
+    <b>跑步完成，去 App 里看记录。</b>
   </p>
   <VBtn v-if="hasTerminalStatus" color="secondary" class="mt-4" @click="goBackSite">
     返回NUAA Guide
