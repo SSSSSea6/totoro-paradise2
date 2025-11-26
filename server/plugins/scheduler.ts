@@ -2,6 +2,11 @@ import { runDueMorningTasks } from '../utils/morningSignScheduler';
 import { isSupabaseConfigured } from '../utils/supabaseAdminClient';
 
 export default defineNitroPlugin((nitroApp) => {
+  // 简单的构建提示，方便在日志中确认是否为最新部署
+  const pkgVersion = process.env.npm_package_version || 'unknown';
+  const buildTag = process.env.BUILD_ID || new Date().toISOString();
+  console.log(`[build-info] version=${pkgVersion} build=${buildTag}`);
+
   if (!isSupabaseConfigured()) {
     console.warn('[morning-scheduler] Supabase env missing, scheduler disabled.');
     return;
