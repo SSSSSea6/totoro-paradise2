@@ -17,14 +17,29 @@ const buildPrivateKeyPem = (): string => {
 
 const decryptRequestContent = (req: string): Record<string, unknown> => {
   const keyPem = buildPrivateKeyPem();
-  const decrypted = crypto.privateDecrypt(
-    {
-      key: keyPem,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    Buffer.from(req, 'base64'),
-  );
-  return JSON.parse(decrypted.toString('utf8'));
+  const keyObject = crypto.createPrivateKey(keyPem);
+  const keySize = keyObject.asymmetricKeySize; // in bytes
+
+  const buffer = Buffer.from(req, 'base64');
+  if (buffer.length % keySize !== 0) {
+    throw new Error('Invalid ciphertext length for RSA block size');
+  }
+
+  const chunks: Buffer[] = [];
+  for (let offset = 0; offset < buffer.length; offset += keySize) {
+    const chunk = buffer.slice(offset, offset + keySize);
+    const decryptedChunk = crypto.privateDecrypt(
+      {
+        key: keyObject,
+        padding: crypto.constants.RSA_PKCS1_PADDING,
+      },
+      chunk,
+    );
+    chunks.push(decryptedChunk);
+  }
+
+  const plaintext = Buffer.concat(chunks).toString('utf8');
+  return JSON.parse(plaintext);
 };
 
 export default decryptRequestContent;

@@ -17,15 +17,26 @@ const buildPrivateKeyPem = (): string => {
 
 const encryptRequestContent = (req: Record<string, any>): string => {
   const keyPem = buildPrivateKeyPem();
+  const keyObject = crypto.createPrivateKey(keyPem);
+  const keySize = keyObject.asymmetricKeySize; // in bytes
+  const maxChunkSize = keySize - 11; // PKCS#1 v1.5 padding overhead
+
   const buffer = Buffer.from(JSON.stringify(req), 'utf8');
-  const encrypted = crypto.privateEncrypt(
-    {
-      key: keyPem,
-      padding: crypto.constants.RSA_PKCS1_PADDING,
-    },
-    buffer,
-  );
-  return encrypted.toString('base64');
+  const chunks: Buffer[] = [];
+
+  for (let offset = 0; offset < buffer.length; offset += maxChunkSize) {
+    const chunk = buffer.slice(offset, offset + maxChunkSize);
+    const encryptedChunk = crypto.privateEncrypt(
+      {
+        key: keyObject,
+        padding: crypto.constants.RSA_PKCS1_PADDING,
+      },
+      chunk,
+    );
+    chunks.push(encryptedChunk);
+  }
+
+  return Buffer.concat(chunks).toString('base64');
 };
 
 export default encryptRequestContent;
