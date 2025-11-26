@@ -29,9 +29,12 @@ import type SubmitMorningExercisesResponse from '../types/responseTypes/SubmitMo
 import type UpdateAppVersionResponse from '../types/responseTypes/UpdateAppVersionResponse';
 import encryptRequestContent from '../utils/encryptRequestContent';
 
+const isServer = typeof window === 'undefined';
+const localBase = isServer ? `http://127.0.0.1:${process.env.PORT || 3000}` : '';
+
 const TotoroApiWrapper = {
   client: ky.create({
-    prefixUrl: '/api/totoro',
+    prefixUrl: `${localBase}/api/totoro`,
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
       // "Content-Length": "0",
