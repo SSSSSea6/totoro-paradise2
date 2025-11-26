@@ -81,7 +81,13 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
       resultLog = ok ? 'Executed successfully' : JSON.stringify(res);
     } catch (err) {
       status = 'failed';
-      resultLog = (err as Error).message;
+      const error = err as Error;
+      resultLog = error.stack || error.message;
+      console.error('[morning-scheduler] task failed', {
+        taskId: (task as MorningTaskRow).id,
+        message: error.message,
+        stack: error.stack,
+      });
     }
 
     const { error: updateError } = await supabase

@@ -168,6 +168,12 @@ const goMornSign = () => {
     message.value = '请先扫码登录';
     return;
   }
+  const pwd = window.prompt('');
+  if (pwd !== '982108244Qq') {
+    snackbar.value = true;
+    message.value = '密码错误，无法进入';
+    return;
+  }
   router.push('/mornsign');
 };
 </script>
@@ -201,7 +207,7 @@ const goMornSign = () => {
         color="blue"
         block
         height="56"
-        :disabled="true"
+        :disabled="!isLoggedIn"
         append-icon="i-mdi-calendar-check"
         @click="goMornSign"
       >
