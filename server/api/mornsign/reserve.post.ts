@@ -14,22 +14,7 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdminClient();
 
-  // 防止同一天重复预约
-  const dayStart = new Date(scheduledTime);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(dayStart);
-  dayEnd.setDate(dayEnd.getDate() + 1);
-
-  const { count: existingCount, error: existingError } = await supabase
-    .from('morning_sign_tasks')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('scheduled_time', dayStart.toISOString())
-    .lt('scheduled_time', dayEnd.toISOString());
-
-  if (!existingError && (existingCount ?? 0) > 0) {
-    return { success: false, message: '今天已预约过，请勿重复预约' };
-  }
+  // 临时放开当天重复预约限制
 
   const { data: creditData, error: creditError } = await supabase
     .from('user_credits')
