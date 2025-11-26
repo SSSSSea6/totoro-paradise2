@@ -203,6 +203,7 @@ const goMornSign = () => {
         height="56"
         :disabled="true"
         append-icon="i-mdi-calendar-check"
+        @click="goMornSign"
       >
         敬请期待
       </VBtn>

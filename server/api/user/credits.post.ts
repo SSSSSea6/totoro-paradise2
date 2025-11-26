@@ -1,5 +1,7 @@
 import { getSupabaseAdminClient, isSupabaseConfigured } from '../../utils/supabaseAdminClient';
 
+const INITIAL_BONUS = 1; // 首次出现的用户赠送 1 次
+
 export default defineEventHandler(async (event) => {
   if (!isSupabaseConfigured()) {
     return { success: false, message: 'Supabase 未配置' };
@@ -23,6 +25,25 @@ export default defineEventHandler(async (event) => {
 
     if (error && error.code !== 'PGRST116') {
       return { success: false, message: error.message };
+    }
+
+    // 首次查询没有记录时，自动赠送一次
+    if (error?.code === 'PGRST116' || !data) {
+      const { data: inserted, error: upsertError } = await supabase
+        .from('user_credits')
+        .upsert({
+          user_id: userId,
+          credits: INITIAL_BONUS,
+          updated_at: new Date().toISOString(),
+        })
+        .select('credits')
+        .single();
+
+      if (upsertError) {
+        return { success: false, message: upsertError.message };
+      }
+
+      return { success: true, credits: inserted?.credits ?? INITIAL_BONUS };
     }
 
     return { success: true, credits: data?.credits ?? 0 };

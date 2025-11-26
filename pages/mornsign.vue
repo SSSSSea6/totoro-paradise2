@@ -31,6 +31,7 @@ const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
 const redeemCode = ref('');
+const redeemLinksDialog = ref(false);
 const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(
   null,
 );
@@ -439,10 +440,10 @@ watch(
           />
           <div class="mt-2 text-center text-caption">
             <a
-              href="https://afdian.net"
-              target="_blank"
+              href="#"
               rel="noopener"
               class="text-blue-500"
+              @click.prevent="redeemLinksDialog = true"
             >
               获取兑换码
             </a>
@@ -454,6 +455,71 @@ watch(
         </VCardActions>
       </VCard>
     </VDialog>
+
+
+    <VDialog v-model="redeemLinksDialog" max-width="420">
+      <VCard title="获取兑换码">
+        <VCardText class="space-y-2">
+          <div>选择需要的次数：</div>
+          <div class="flex flex-col gap-2">
+            <VBtn
+              variant="tonal"
+              color="primary"
+              href="https://afdian.com/item/2bd8c944c9dc11f09f995254001e7c00"
+              target="_blank"
+              rel="noopener"
+              block
+            >
+              获取 1 次
+            </VBtn>
+            <VBtn
+              variant="tonal"
+              color="primary"
+              href="https://afdian.com/item/bc3973fcc9dd11f0b56352540025c377"
+              target="_blank"
+              rel="noopener"
+              block
+            >
+              获取 2 次
+            </VBtn>
+            <VBtn
+              variant="tonal"
+              color="primary"
+              href="https://afdian.com/item/1953981ac9de11f0b69652540025c377"
+              target="_blank"
+              rel="noopener"
+              block
+            >
+              获取 5 次
+            </VBtn>
+            <VBtn
+              variant="tonal"
+              color="primary"
+              href="https://afdian.com/item/be460538c9de11f0adee52540025c377"
+              target="_blank"
+              rel="noopener"
+              block
+            >
+              获取 10 次
+            </VBtn>
+            <VBtn
+              variant="tonal"
+              color="primary"
+              href="https://afdian.com/item/2f87de74c9df11f09c7c5254001e7c00"
+              target="_blank"
+              rel="noopener"
+              block
+            >
+              获取 30 次
+            </VBtn>
+          </div>
+        </VCardText>
+        <VCardActions class="justify-end">
+          <VBtn variant="text" @click="redeemLinksDialog = false">关闭</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
 
     <VSnackbar v-model="snackbar" :timeout="3000">
       {{ snackbarMessage }}
