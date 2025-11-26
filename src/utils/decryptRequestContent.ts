@@ -19,7 +19,8 @@ const buildPrivateKeyBuffer = (): NodeBuffer => {
 
 const decryptRequestContent = (req: string): Record<string, unknown> => {
   const keyBuf = buildPrivateKeyBuffer();
-  const rsa = new NodeRSA(keyBuf, 'pkcs8-private-pem', { environment: 'node' });
+  const rsa = new NodeRSA(undefined, undefined, { environment: 'node' });
+  rsa.importKey(keyBuf, 'pkcs8-private-pem');
   rsa.setOptions({ encryptionScheme: 'pkcs1' });
   const cipherBuffer = NodeBuffer.from(req, 'base64');
   const decrypted = rsa.decrypt(cipherBuffer, 'utf8');

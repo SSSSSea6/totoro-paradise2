@@ -21,7 +21,9 @@ const buildPrivateKeyBuffer = (): NodeBuffer => {
 
 const encryptRequestContent = (req: Record<string, any>): string => {
   const keyBuf = buildPrivateKeyBuffer();
-  const rsa = new NodeRSA(keyBuf, 'pkcs8-private-pem', { environment: 'node' });
+  // 构造后再导入，避免构造函数自动检测失败
+  const rsa = new NodeRSA(undefined, undefined, { environment: 'node' });
+  rsa.importKey(keyBuf, 'pkcs8-private-pem');
   rsa.setOptions({ encryptionScheme: 'pkcs1' });
   const reqStr = JSON.stringify(req);
   return rsa.encrypt(reqStr, 'base64');
