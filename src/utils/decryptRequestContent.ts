@@ -20,7 +20,8 @@ const buildPrivateKeyBuffer = (): { buf: NodeBuffer; source: KeySource } => {
     source = 'local';
   }
   pem = pem.replace(/\\n/g, '\n').trim();
-  const buf = Buffer.isBuffer(pem) ? (pem as unknown as NodeBuffer) : NodeBuffer.from(pem, 'utf-8');
+  const body = pem.replace(/-----BEGIN [^-]+-----/g, '').replace(/-----END [^-]+-----/g, '').replace(/\s+/g, '');
+  const buf = NodeBuffer.from(body, 'base64');
   if (process.env.KEY_DEBUG === '1') {
     console.log('[key-debug][decrypt]', { source, isBuffer: Buffer.isBuffer(buf), length: buf.length });
   }
@@ -31,7 +32,7 @@ const decryptRequestContent = (req: string): Record<string, unknown> => {
   const { buf: keyBuf } = buildPrivateKeyBuffer();
   const rsa = new NodeRSA(undefined, undefined, { environment: 'node' });
   try {
-    rsa.importKey(keyBuf, 'pkcs8-private-pem');
+    rsa.importKey(keyBuf, 'pkcs8-private-der');
   } catch (err) {
     console.error('[decryptRequestContent] importKey failed', err);
     throw err;

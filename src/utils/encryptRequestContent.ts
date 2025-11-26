@@ -20,7 +20,9 @@ const buildPrivateKeyBuffer = (): { buf: NodeBuffer; source: KeySource } => {
     source = 'local';
   }
   pem = pem.replace(/\\n/g, '\n').trim();
-  const buf = Buffer.isBuffer(pem) ? (pem as unknown as NodeBuffer) : NodeBuffer.from(pem, 'utf-8');
+  // 提取 PEM 主体转 DER，避免不同 Buffer polyfill 不兼容
+  const body = pem.replace(/-----BEGIN [^-]+-----/g, '').replace(/-----END [^-]+-----/g, '').replace(/\s+/g, '');
+  const buf = NodeBuffer.from(body, 'base64');
   if (process.env.KEY_DEBUG === '1') {
     console.log('[key-debug][encrypt]', { source, isBuffer: Buffer.isBuffer(buf), length: buf.length });
   }
@@ -32,7 +34,7 @@ const encryptRequestContent = (req: Record<string, any>): string => {
   // 构造后再导入，避免构造函数自动检测失败
   const rsa = new NodeRSA(undefined, undefined, { environment: 'node' });
   try {
-    rsa.importKey(keyBuf, 'pkcs8-private-pem');
+    rsa.importKey(keyBuf, 'pkcs8-private-der');
   } catch (err) {
     console.error('[encryptRequestContent] importKey failed', err);
     throw err;
