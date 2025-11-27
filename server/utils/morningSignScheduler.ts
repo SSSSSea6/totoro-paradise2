@@ -34,16 +34,14 @@ const maskToken = (token?: string | null) => {
 };
 
 const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string) => {
+  // 与阳光跑伪造逻辑对齐：无基站、iPhone 指纹、固定版本，MAC 取学号哈希
   const hex = createHash('sha256').update(userId || 'anon').digest('hex');
-  const mac = deviceInfo.mac
-    || `${hex.slice(0, 2)}:${hex.slice(2, 4)}:${hex.slice(4, 6)}:${hex.slice(6, 8)}:${hex.slice(8, 10)}:${hex.slice(10, 12)}`;
-  const lac = (parseInt(hex.slice(12, 16), 16) % 65535).toString();
-  const cid = (parseInt(hex.slice(16, 20), 16) % 65535).toString();
+  const mac = deviceInfo.mac || hex.substring(0, 32);
   return {
-    phoneInfo: deviceInfo.phoneInfo || 'CN001/Huawei/ELS-AN00/Android/13',
-    baseStation: deviceInfo.baseStation || `46000:${lac}:${cid}:-65`,
+    phoneInfo: deviceInfo.phoneInfo || '$CN11/iPhone15,4/17.4.1',
+    baseStation: deviceInfo.baseStation || '',
     mac,
-    appVersion: deviceInfo.appVersion || '2.0.3',
+    appVersion: deviceInfo.appVersion || '1.2.14',
     deviceType: deviceInfo.deviceType || '2',
     headImage: deviceInfo.headImage || '',
   };
