@@ -23,6 +23,7 @@ const isLoggedIn = computed(
 const polling = ref(false);
 const pollTimer = ref<ReturnType<typeof setInterval> | null>(null);
 const router = useRouter();
+const poemLines = useState('home-poem', () => poem[Math.floor(Math.random() * poem.length)]);
 
 const isKyHttpError = (error: unknown): error is HTTPError =>
   !!error &&
@@ -168,7 +169,7 @@ const goMornSign = () => {
     message.value = '请先扫码登录';
     return;
   }
-  const pwd = window.prompt('');
+  const pwd = window.prompt('请输入访问早操签到的密码');
   if (pwd !== '982108244Qq') {
     snackbar.value = true;
     message.value = '密码错误，无法进入';
@@ -218,7 +219,7 @@ const goMornSign = () => {
       未登录时入口按钮会置灰，请先扫码等待自动登录。
     </div>
     <div class="mt-4 text-center text-gray-700 font-bold text-xl whitespace-pre-line">
-      {{ poem[Math.floor(Math.random() * poem.length)].join('\n') }}
+      {{ poemLines?.join('\n') }}
     </div>
     <VSnackbar v-model="snackbar" :timeout="3000">
       {{ message }}

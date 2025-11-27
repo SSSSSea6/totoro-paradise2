@@ -14,7 +14,36 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdminClient();
 
-  // 临时放开当天重复预约限制
+  const scheduled = new Date(scheduledTime);
+  if (Number.isNaN(scheduled.getTime())) {
+    return { success: false, message: '预约时间无效' };
+  }
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  if (scheduled < todayStart) {
+    return { success: false, message: '不能预约今天以前的日期' };
+  }
+
+  // 同一天禁止重复预约
+  const dayStart = new Date(scheduled);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const { count: existingCount, error: existingError } = await supabase
+    .from('morning_sign_tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('scheduled_time', dayStart.toISOString())
+    .lt('scheduled_time', dayEnd.toISOString());
+
+  if (existingError) {
+    return { success: false, message: '检查重复预约失败' };
+  }
+  if ((existingCount ?? 0) > 0) {
+    return { success: false, message: '同一天已预约，请勿重复预约' };
+  }
 
   const { data: creditData, error: creditError } = await supabase
     .from('user_credits')

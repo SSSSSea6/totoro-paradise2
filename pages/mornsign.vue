@@ -27,17 +27,18 @@ const signPoints = ref<MornSignPoint[]>([]);
 const records = ref<RecordItem[]>([]);
 const selectedPointId = ref('');
 const reservationDate = ref<string>(getDefaultDate());
-const reservationTime = ref<string>(getDefaultTime());
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
 const redeemCode = ref('');
 const redeemLinksDialog = ref(false);
+const reloginDialog = ref(false);
+const reservedOnce = ref(false);
 const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(
   null,
 );
 const lastScheduledTime = ref('');
-const displayStart = '07:00';
+const displayStart = '06:50';
 const displayEnd = '08:20';
 
 const isLoggedIn = computed(() => Boolean(hydratedSession.value?.token));
@@ -53,18 +54,22 @@ function getDefaultDate() {
   return tomorrow.toISOString().slice(0, 10);
 }
 
-function getDefaultTime() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() + 5);
-  return now.toISOString().slice(11, 16); // HH:mm
-}
-
 const ensureLogin = () => {
   if (!isLoggedIn.value) {
     notify('请先扫码登录');
     return false;
   }
   return true;
+};
+
+const isPastDate = (dateStr?: string) => {
+  if (!dateStr) return false;
+  const selected = new Date(dateStr);
+  if (Number.isNaN(selected.getTime())) return true;
+  selected.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return selected < today;
 };
 
 const displayName = computed(() => {
@@ -180,10 +185,15 @@ const loadMornSignPaper = async () => {
 };
 
 const computeScheduledTime = () => {
+  // 06:50:00 - 08:20:59 随机
   const datePart = reservationDate.value || new Date().toISOString().slice(0, 10);
-  const timePart = reservationTime.value || getDefaultTime();
-  const candidate = new Date(`${datePart}T${timePart}:00`);
-  return candidate.toISOString();
+  const base = new Date(`${datePart}T06:50:00`);
+  const maxMinutes = 90; // 06:50 -> 08:20
+  const minutesOffset = Math.floor(Math.random() * (maxMinutes + 1));
+  const secondsOffset = Math.floor(Math.random() * 60);
+  base.setMinutes(base.getMinutes() + minutesOffset);
+  base.setSeconds(secondsOffset);
+  return base.toISOString();
 };
 
 const jitterPoint = (point: MornSignPoint, meters = 10): MornSignPoint => {
@@ -237,6 +247,14 @@ const handleReserve = async () => {
   if (!signPoints.value.length) {
     await loadMornSignPaper();
   }
+  if (reservedOnce.value) {
+    reloginDialog.value = true;
+    return;
+  }
+  if (isPastDate(reservationDate.value)) {
+    notify('不能预约今天以前的日期');
+    return;
+  }
   const target =
     signPoints.value.find((p) => p.pointId === selectedPointId.value) || signPoints.value[0];
   if (!target) {
@@ -266,6 +284,7 @@ const handleReserve = async () => {
     if (res.success) {
       credits.value = Math.max(0, credits.value - 1);
       lastScheduledTime.value = scheduledTime;
+      reservedOnce.value = true;
       await loadRecords();
     }
   } catch (error) {
@@ -300,6 +319,7 @@ onMounted(() => {
     router.push('/login?redirect=/mornsign');
     return;
   }
+  reservedOnce.value = false;
   // 进入页时刷新一次信息，确保显示当前账号
   session.value = normalizeSession(localStorage.getItem('totoroSession') || session.value || {});
   hydrateSession();
@@ -315,6 +335,7 @@ watch(
       router.push('/login?redirect=/mornsign');
       return;
     }
+    reservedOnce.value = false;
     hydrateSession();
     fetchCredits();
     loadMornSignPaper();
@@ -359,7 +380,7 @@ watch(
         <div>
           <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            可自由选择时间（精确到分钟）
+            系统将在 06:50 ~ 08:20 间随机提交
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
@@ -377,20 +398,13 @@ watch(
             :loading="fetchingPoints"
             variant="outlined"
           />
+          <div class="text-caption text-gray-500 mt-1">获取点位失败请多刷新几次</div>
         </VCol>
         <VCol cols="12" md="6">
           <VTextField
             v-model="reservationDate"
             type="date"
             label="预约日期"
-            variant="outlined"
-          />
-        </VCol>
-        <VCol cols="12" md="6">
-          <VTextField
-            v-model="reservationTime"
-            type="time"
-            label="预约时间"
             variant="outlined"
           />
         </VCol>
@@ -458,6 +472,15 @@ watch(
         <VCardActions class="justify-end">
           <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
           <VBtn color="primary" @click="handleRedeem">兑换</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="reloginDialog" max-width="360">
+      <VCard>
+        <VCardText class="text-center">请再次登录以预约</VCardText>
+        <VCardActions class="justify-center">
+          <VBtn color="primary" to="/login?redirect=/mornsign">去登录</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>

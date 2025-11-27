@@ -22,7 +22,8 @@ type ProcessResult = {
 
 const isSuccessfulResponse = (res?: SubmitMorningExercisesResponse | null) => {
   if (!res) return false;
-  return res.status === '00' || res.code === '0';
+  // 仅当状态码和返回码都符合预期时才认为成功
+  return res.status === '00' && res.code === '0';
 };
 
 const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
@@ -78,7 +79,7 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
       const res = await TotoroApiWrapper.submitMorningExercises(req);
       const ok = isSuccessfulResponse(res);
       status = ok ? 'success' : 'failed';
-      resultLog = ok ? 'Executed successfully' : JSON.stringify(res);
+      resultLog = JSON.stringify(res);
     } catch (err) {
       status = 'failed';
       const error = err as Error;
