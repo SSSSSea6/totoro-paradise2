@@ -33,13 +33,55 @@ const maskToken = (token?: string | null) => {
   return `${token.slice(0, 4)}***${token.slice(-4)}`;
 };
 
-const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string) => {
-  // 与阳光跑伪造逻辑对齐：无基站、iPhone 指纹、固定版本，MAC 取学号哈希
-  const hex = createHash('sha256').update(userId || 'anon').digest('hex');
-  const mac = deviceInfo.mac || hex.substring(0, 32);
+const pseudoRandomFromHash = (hex: string, offset = 0) => {
+  const slice = hex.slice(offset, offset + 8) || '0';
+  const val = parseInt(slice, 16);
+  return (val / 0xffffffff) * 2 - 1; // [-1, 1]
+};
+
+const jitterLocation = (point: Partial<MornSignPoint>, hexSeed: string) => {
+  const lat = Number(point.latitude);
+  const lng = Number(point.longitude);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return { lat, lng };
+  const maxMeters = 8; // 控制在几米范围内抖动
+  const degLat = maxMeters / 111000;
+  const degLng = maxMeters / (111000 * Math.cos((lat * Math.PI) / 180) || 1);
+  const randLat = pseudoRandomFromHash(hexSeed, 0);
+  const randLng = pseudoRandomFromHash(hexSeed, 8);
   return {
-    phoneInfo: deviceInfo.phoneInfo || '$CN11/iPhone15,4/17.4.1',
-    baseStation: deviceInfo.baseStation || '',
+    lat: lat + randLat * degLat,
+    lng: lng + randLng * degLng,
+  };
+};
+
+const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string) => {
+  // 伪造接近真机的指纹字段，尽量符合官方参数格式
+  const hex = createHash('sha256').update(userId || 'anon').digest('hex');
+  const imei =
+    deviceInfo.imei ||
+    hex
+      .replace(/[a-f]/gi, (ch) => (parseInt(ch, 16) % 10).toString())
+      .slice(0, 15)
+      .padEnd(15, '0');
+  const brand = deviceInfo.brand || 'HUAWEI';
+  const model = deviceInfo.model || 'ALP-AL00';
+  const androidVersion = deviceInfo.androidVersion || '13';
+  const mac =
+    deviceInfo.mac ||
+    hex
+      .slice(0, 12)
+      .match(/.{1,2}/g)
+      ?.join(':')
+      .toUpperCase() ||
+    '';
+  const lac = deviceInfo.lac || (parseInt(hex.slice(12, 16), 16) % 60000).toString();
+  const cid = deviceInfo.cid || (parseInt(hex.slice(16, 20), 16) % 60000).toString();
+  const mcc = deviceInfo.mcc || '460';
+  const mnc = deviceInfo.mnc || '00';
+  const baseStation = deviceInfo.baseStation || `${mcc}|${mnc}|${lac}|${cid}`;
+  return {
+    phoneInfo: deviceInfo.phoneInfo || `CN001/${imei}/${brand}/${model}/${androidVersion}`,
+    baseStation,
     mac,
     appVersion: deviceInfo.appVersion || '1.2.14',
     deviceType: deviceInfo.deviceType || '2',
@@ -56,6 +98,8 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
   }
 
   const fake = generateFakeDeviceInfo(deviceInfo, task.user_id);
+  const seedHex = createHash('md5').update(task.user_id || '').digest('hex');
+  const { lat, lng } = jitterLocation(point, seedHex);
 
   return {
     token: task.token,
@@ -63,8 +107,8 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
     schoolId: deviceInfo.schoolId ?? '',
     stuNumber: task.user_id,
     phoneNumber: deviceInfo.phoneNumber || '',
-    latitude: String(point.latitude ?? ''),
-    longitude: String(point.longitude ?? ''),
+    latitude: String(deviceInfo.latitude ?? lat ?? point.latitude ?? ''),
+    longitude: String(deviceInfo.longitude ?? lng ?? point.longitude ?? ''),
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
@@ -74,7 +118,6 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
     phoneInfo: fake.phoneInfo,
     mac: fake.mac,
     appVersion: fake.appVersion,
-    // 默认尝试用 signType=1（逆向看到存在 0/1 分支），若任务或设备有值则优先使用
     signType: (point as any).signType || deviceInfo.signType || '0',
   };
 };
