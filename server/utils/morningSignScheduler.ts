@@ -75,7 +75,23 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
     let status: 'success' | 'failed' = 'success';
 
     try {
-      const req = buildRequestFromTask(task as MorningTaskRow);
+      // 尝试刷新 token：如果上游返回了新 token，就更新任务使用它
+      let freshToken = (task as MorningTaskRow).token;
+      try {
+        const loginRes = await TotoroApiWrapper.login({ token: (task as MorningTaskRow).token });
+        if (loginRes?.token) {
+          freshToken = loginRes.token;
+          // 同步更新任务记录中的 token，方便后续执行
+          await supabase
+            .from('morning_sign_tasks')
+            .update({ token: freshToken })
+            .eq('id', (task as MorningTaskRow).id);
+        }
+      } catch (loginErr) {
+        console.warn('[morning-scheduler] refresh token failed, fallback to old token', loginErr);
+      }
+
+      const req = buildRequestFromTask({ ...(task as MorningTaskRow), token: freshToken });
       const res = await TotoroApiWrapper.submitMorningExercises(req);
       const ok = isSuccessfulResponse(res);
       status = ok ? 'success' : 'failed';
