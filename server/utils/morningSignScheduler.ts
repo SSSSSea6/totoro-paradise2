@@ -55,35 +55,14 @@ const jitterLocation = (point: Partial<MornSignPoint>, hexSeed: string) => {
 };
 
 const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string) => {
-  // 伪造接近真机的指纹字段，尽量符合官方参数格式
+  // 与阳光跑保持一致：iPhone UA、空基站、学号哈希 MAC、固定版本
   const hex = createHash('sha256').update(userId || 'anon').digest('hex');
-  const imei =
-    deviceInfo.imei ||
-    hex
-      .replace(/[a-f]/gi, (ch) => (parseInt(ch, 16) % 10).toString())
-      .slice(0, 15)
-      .padEnd(15, '0');
-  const brand = deviceInfo.brand || 'HUAWEI';
-  const model = deviceInfo.model || 'ALP-AL00';
-  const androidVersion = deviceInfo.androidVersion || '13';
-  const mac =
-    deviceInfo.mac ||
-    hex
-      .slice(0, 12)
-      .match(/.{1,2}/g)
-      ?.join(':')
-      .toUpperCase() ||
-    '';
-  const lac = deviceInfo.lac || (parseInt(hex.slice(12, 16), 16) % 60000).toString();
-  const cid = deviceInfo.cid || (parseInt(hex.slice(16, 20), 16) % 60000).toString();
-  const mcc = deviceInfo.mcc || '460';
-  const mnc = deviceInfo.mnc || '00';
-  const baseStation = deviceInfo.baseStation || `${mcc}|${mnc}|${lac}|${cid}`;
+  const sunRunMac = hex.substring(0, 32);
   return {
-    phoneInfo: deviceInfo.phoneInfo || `CN001/${imei}/${brand}/${model}/${androidVersion}`,
-    baseStation,
-    mac,
-    appVersion: deviceInfo.appVersion || '1.2.14',
+    phoneInfo: deviceInfo.phoneInfo || '$CN11/iPhone15,4/17.4.1',
+    baseStation: deviceInfo.baseStation ?? '',
+    mac: deviceInfo.mac || sunRunMac,
+    appVersion: deviceInfo.appVersion || '1.2.16',
     deviceType: deviceInfo.deviceType || '2',
     headImage: deviceInfo.headImage || '',
   };
@@ -107,8 +86,8 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
     schoolId: deviceInfo.schoolId ?? '',
     stuNumber: task.user_id,
     phoneNumber: deviceInfo.phoneNumber || '',
-    latitude: String(deviceInfo.latitude ?? lat ?? point.latitude ?? ''),
-    longitude: String(deviceInfo.longitude ?? lng ?? point.longitude ?? ''),
+    latitude: String(lat ?? point.latitude ?? ''),
+    longitude: String(lng ?? point.longitude ?? ''),
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
