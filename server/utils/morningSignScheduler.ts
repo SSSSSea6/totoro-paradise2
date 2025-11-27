@@ -26,6 +26,12 @@ const isSuccessfulResponse = (res?: SubmitMorningExercisesResponse | null) => {
   return res.status === '00' && res.code === '0';
 };
 
+const maskToken = (token?: string | null) => {
+  if (!token) return token;
+  if (token.length <= 10) return '***';
+  return `${token.slice(0, 4)}***${token.slice(-4)}`;
+};
+
 const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
   const signPoint = (task.sign_point || {}) as Partial<MornSignPoint>;
   const deviceInfo = (task.device_info || {}) as Record<string, any>;
@@ -77,10 +83,12 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
     try {
       // 尝试刷新 token：如果上游返回了新 token，就更新任务使用它
       let freshToken = (task as MorningTaskRow).token;
+      let refreshed = false;
       try {
         const loginRes = await TotoroApiWrapper.login({ token: (task as MorningTaskRow).token });
         if (loginRes?.token) {
           freshToken = loginRes.token;
+          refreshed = true;
           // 同步更新任务记录中的 token，方便后续执行
           await supabase
             .from('morning_sign_tasks')
@@ -91,15 +99,25 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
         console.warn('[morning-scheduler] refresh token failed, fallback to old token', loginErr);
       }
 
-      const req = buildRequestFromTask({ ...(task as MorningTaskRow), token: freshToken });
+      const taskWithToken = { ...(task as MorningTaskRow), token: freshToken };
+      const req = buildRequestFromTask(taskWithToken);
       const res = await TotoroApiWrapper.submitMorningExercises(req);
       const ok = isSuccessfulResponse(res);
       status = ok ? 'success' : 'failed';
-      resultLog = JSON.stringify(res);
+      resultLog = JSON.stringify({
+        refreshed,
+        maskedToken: maskToken(freshToken),
+        req,
+        res,
+      });
     } catch (err) {
       status = 'failed';
       const error = err as Error;
-      resultLog = error.stack || error.message;
+      resultLog = JSON.stringify({
+        maskedToken: maskToken((task as MorningTaskRow).token),
+        error: error.stack || error.message,
+        task,
+      });
       console.error('[morning-scheduler] task failed', {
         taskId: (task as MorningTaskRow).id,
         message: error.message,

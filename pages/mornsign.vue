@@ -33,8 +33,6 @@ const snackbarMessage = ref('');
 const redeemDialog = ref(false);
 const redeemCode = ref('');
 const redeemLinksDialog = ref(false);
-const reloginDialog = ref(false);
-const reservedOnce = ref(false);
 const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(
   null,
 );
@@ -249,10 +247,6 @@ const handleReserve = async () => {
   if (!signPoints.value.length) {
     await loadMornSignPaper();
   }
-  if (reservedOnce.value) {
-    reloginDialog.value = true;
-    return;
-  }
   if (isPastDate(reservationDate.value)) {
     notify('不能预约今天以前的日期');
     return;
@@ -286,7 +280,6 @@ const handleReserve = async () => {
     if (res.success) {
       credits.value = Math.max(0, credits.value - 1);
       lastScheduledTime.value = scheduledTime;
-      reservedOnce.value = true;
       await loadRecords();
     }
   } catch (error) {
@@ -321,7 +314,6 @@ onMounted(() => {
     router.push('/login?redirect=/mornsign');
     return;
   }
-  reservedOnce.value = false;
   // 进入页时刷新一次信息，确保显示当前账号
   session.value = normalizeSession(localStorage.getItem('totoroSession') || session.value || {});
   hydrateSession();
@@ -337,7 +329,6 @@ watch(
       router.push('/login?redirect=/mornsign');
       return;
     }
-    reservedOnce.value = false;
     hydrateSession();
     fetchCredits();
     loadMornSignPaper();
@@ -482,15 +473,6 @@ watch(
         <VCardActions class="justify-end">
           <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
           <VBtn color="primary" @click="handleRedeem">兑换</VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
-
-    <VDialog v-model="reloginDialog" max-width="360">
-      <VCard>
-        <VCardText class="text-center">请再次登录以预约</VCardText>
-        <VCardActions class="justify-center">
-          <VBtn color="primary" to="/login?redirect=/mornsign">去登录</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>
