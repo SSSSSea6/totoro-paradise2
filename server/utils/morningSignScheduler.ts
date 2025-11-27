@@ -75,7 +75,8 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
     phoneInfo: fake.phoneInfo,
     mac: fake.mac,
     appVersion: fake.appVersion,
-    signType: (point as any).signType || deviceInfo.signType || '0',
+    // 默认尝试用 signType=1（逆向看到存在 0/1 分支），若任务或设备有值则优先使用
+    signType: (point as any).signType || deviceInfo.signType || '1',
   };
 };
 
