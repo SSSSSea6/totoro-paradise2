@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import TotoroApiWrapper from '~~/src/wrappers/TotoroApiWrapper';
 import type MornSignPoint from '~~/src/types/MornSignPoint';
 import type SubmitMornSignRequest from '~~/src/types/requestTypes/SubmitMornSignRequest';
@@ -32,6 +33,22 @@ const maskToken = (token?: string | null) => {
   return `${token.slice(0, 4)}***${token.slice(-4)}`;
 };
 
+const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string) => {
+  const hex = createHash('sha256').update(userId || 'anon').digest('hex');
+  const mac = deviceInfo.mac
+    || `${hex.slice(0, 2)}:${hex.slice(2, 4)}:${hex.slice(4, 6)}:${hex.slice(6, 8)}:${hex.slice(8, 10)}:${hex.slice(10, 12)}`;
+  const lac = (parseInt(hex.slice(12, 16), 16) % 65535).toString();
+  const cid = (parseInt(hex.slice(16, 20), 16) % 65535).toString();
+  return {
+    phoneInfo: deviceInfo.phoneInfo || 'CN001/Huawei/ELS-AN00/Android/13',
+    baseStation: deviceInfo.baseStation || `46000:${lac}:${cid}:-65`,
+    mac,
+    appVersion: deviceInfo.appVersion || '2.0.3',
+    deviceType: deviceInfo.deviceType || '2',
+    headImage: deviceInfo.headImage || '',
+  };
+};
+
 const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
   const point = (task.sign_point || {}) as Partial<MornSignPoint>;
   const deviceInfo = (task.device_info || {}) as Record<string, any>;
@@ -40,24 +57,26 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
     throw new Error('Missing sign point information on task.');
   }
 
+  const fake = generateFakeDeviceInfo(deviceInfo, task.user_id);
+
   return {
     token: task.token,
     campusId: deviceInfo.campusId ?? '',
     schoolId: deviceInfo.schoolId ?? '',
     stuNumber: task.user_id,
-    phoneNumber: deviceInfo.phoneNumber,
+    phoneNumber: deviceInfo.phoneNumber || '',
     latitude: String(point.latitude ?? ''),
     longitude: String(point.longitude ?? ''),
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
-    deviceType: deviceInfo.deviceType ?? '2',
+    deviceType: fake.deviceType,
     phoneNumber: deviceInfo.phoneNumber,
-    headImage: deviceInfo.headImage || '',
-    baseStation: deviceInfo.baseStation || '',
-    phoneInfo: deviceInfo.phoneInfo || 'CN001/unknown/unknown/unknown/unknown',
-    mac: deviceInfo.mac || '',
-    appVersion: deviceInfo.appVersion || '2.0.3',
+    headImage: fake.headImage,
+    baseStation: fake.baseStation,
+    phoneInfo: fake.phoneInfo,
+    mac: fake.mac,
+    appVersion: fake.appVersion,
     signType: (point as any).signType || deviceInfo.signType || '0',
   };
 };
