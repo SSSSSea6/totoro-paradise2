@@ -35,6 +35,11 @@ const localBase = isServer ? `http://127.0.0.1:${process.env.PORT || 3000}` : ''
 const TotoroApiWrapper = {
   client: ky.create({
     prefixUrl: `${localBase}/api/totoro`,
+    timeout: 12000,
+    retry: {
+      limit: 2,
+      methods: ['post'],
+    },
     headers: {
       'Content-Type': 'text/plain; charset=utf-8',
       // "Content-Length": "0",

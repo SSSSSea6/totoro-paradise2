@@ -172,7 +172,10 @@ const loadMornSignPaper = async () => {
       stuNumber: hydratedSession.value.stuNumber,
     };
     const paper = await TotoroApiWrapper.getMornSignPaper(breq);
-    signPoints.value = paper.signPointList || [];
+    signPoints.value = (paper.signPointList || []).map((p) => ({
+      ...p,
+      signType: paper.signType,
+    }));
     if (!selectedPointId.value && signPoints.value.length) {
       selectedPointId.value = signPoints.value[0]!.pointId;
     }
@@ -273,6 +276,7 @@ const handleReserve = async () => {
           campusId: hydratedSession.value.campusId,
           schoolId: hydratedSession.value.schoolId,
           phoneNumber: hydratedSession.value.phoneNumber,
+          signType: (signPoints.value.find((p) => p.pointId === target.pointId) as any)?.signType,
         },
       },
     });

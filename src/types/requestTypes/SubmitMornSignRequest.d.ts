@@ -1,6 +1,7 @@
 import type BasicRequest from './BasicRequest';
 
 export default interface SubmitMornSignRequest extends BasicRequest {
+  phoneNumber?: string;
   latitude: string;
   longitude: string;
   taskId: string;
@@ -8,4 +9,10 @@ export default interface SubmitMornSignRequest extends BasicRequest {
   qrCode?: string;
   deviceType?: string;
   phoneNumber?: string;
+  headImage?: string;
+  baseStation?: string;
+  phoneInfo?: string;
+  mac?: string;
+  appVersion?: string;
+  signType?: string;
 }

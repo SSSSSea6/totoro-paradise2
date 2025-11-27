@@ -3,8 +3,6 @@ import type MornSignPoint from '~~/src/types/MornSignPoint';
 import type SubmitMornSignRequest from '~~/src/types/requestTypes/SubmitMornSignRequest';
 import type SubmitMorningExercisesResponse from '~~/src/types/responseTypes/SubmitMorningExercisesResponse';
 import { getSupabaseAdminClient, isSupabaseConfigured } from './supabaseAdminClient';
-import type GetMornSignPaperResponse from '~~/src/types/responseTypes/GetMornSignPaperResponse';
-import type BasicRequest from '~~/src/types/requestTypes/BasicRequest';
 
 type MorningTaskRow = {
   id: number;
@@ -34,8 +32,8 @@ const maskToken = (token?: string | null) => {
   return `${token.slice(0, 4)}***${token.slice(-4)}`;
 };
 
-const buildRequestFromTask = (task: MorningTaskRow, signPoint?: Partial<MornSignPoint>): SubmitMornSignRequest => {
-  const point = (signPoint || task.sign_point || {}) as Partial<MornSignPoint>;
+const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
+  const point = (task.sign_point || {}) as Partial<MornSignPoint>;
   const deviceInfo = (task.device_info || {}) as Record<string, any>;
 
   if (!point.taskId || !point.pointId) {
@@ -47,6 +45,7 @@ const buildRequestFromTask = (task: MorningTaskRow, signPoint?: Partial<MornSign
     campusId: deviceInfo.campusId ?? '',
     schoolId: deviceInfo.schoolId ?? '',
     stuNumber: task.user_id,
+    phoneNumber: deviceInfo.phoneNumber,
     latitude: String(point.latitude ?? ''),
     longitude: String(point.longitude ?? ''),
     taskId: String(point.taskId ?? ''),
@@ -54,6 +53,12 @@ const buildRequestFromTask = (task: MorningTaskRow, signPoint?: Partial<MornSign
     qrCode: point.qrCode,
     deviceType: deviceInfo.deviceType ?? '2',
     phoneNumber: deviceInfo.phoneNumber,
+    headImage: deviceInfo.headImage || '',
+    baseStation: deviceInfo.baseStation || '',
+    phoneInfo: deviceInfo.phoneInfo || 'CN001/unknown/unknown/unknown/unknown',
+    mac: deviceInfo.mac || '',
+    appVersion: deviceInfo.appVersion || '2.0.3',
+    signType: (point as any).signType || deviceInfo.signType || '0',
   };
 };
 
@@ -83,56 +88,15 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
     let status: 'success' | 'failed' = 'success';
 
     try {
-      // 尝试刷新 token：如果上游返回了新 token，就更新任务使用它
-      let freshToken = (task as MorningTaskRow).token;
-      let refreshed = false;
-      let latestPoint: Partial<MornSignPoint> | undefined;
-      try {
-        const loginRes = await TotoroApiWrapper.login({ token: (task as MorningTaskRow).token });
-        if (loginRes?.token) {
-          freshToken = loginRes.token;
-          refreshed = true;
-          // 同步更新任务记录中的 token，方便后续执行
-          await supabase
-            .from('morning_sign_tasks')
-            .update({ token: freshToken })
-            .eq('id', (task as MorningTaskRow).id);
-        }
-      } catch (loginErr) {
-        console.warn('[morning-scheduler] refresh token failed, fallback to old token', loginErr);
-      }
-
-      // 尝试拉取最新签到点位，优先用最新数据
-      try {
-        const deviceInfo = (task as MorningTaskRow).device_info || {};
-        const breq: BasicRequest = {
-          token: freshToken,
-          campusId: (deviceInfo as any).campusId,
-          schoolId: (deviceInfo as any).schoolId,
-          stuNumber: (task as MorningTaskRow).user_id,
-        };
-        const paper = (await TotoroApiWrapper.getMornSignPaper(breq)) as GetMornSignPaperResponse;
-        if (paper?.signPointList?.length) {
-          // 选和任务 pointId 相同的点，否则取第一个
-          const match =
-            paper.signPointList.find((p) => p.pointId === (task as MorningTaskRow).sign_point?.pointId) ||
-            paper.signPointList[0];
-          latestPoint = match;
-        }
-      } catch (paperErr) {
-        console.warn('[morning-scheduler] refresh paper failed, fallback to task point', paperErr);
-      }
-
-      const taskWithToken = { ...(task as MorningTaskRow), token: freshToken };
-      const req = buildRequestFromTask(taskWithToken, latestPoint);
+      const req = buildRequestFromTask(task as MorningTaskRow);
       const res = await TotoroApiWrapper.submitMorningExercises(req);
       const ok = isSuccessfulResponse(res);
       status = ok ? 'success' : 'failed';
       resultLog = JSON.stringify({
-        refreshed,
-        usedLatestPoint: Boolean(latestPoint),
+        refreshed: false,
+        usedLatestPoint: false,
         pointId: req.pointId,
-        maskedToken: maskToken(freshToken),
+        maskedToken: maskToken((task as MorningTaskRow).token),
         req,
         res,
       });
