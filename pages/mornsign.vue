@@ -27,6 +27,7 @@ const signPoints = ref<MornSignPoint[]>([]);
 const records = ref<RecordItem[]>([]);
 const selectedPointId = ref('');
 const reservationDate = ref<string>(getDefaultDate());
+const reservationTime = ref<string>(getDefaultTime());
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
@@ -52,6 +53,12 @@ function getDefaultDate() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return tomorrow.toISOString().slice(0, 10);
+}
+
+function getDefaultTime() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 5);
+  return now.toISOString().slice(11, 16); // HH:mm
 }
 
 const ensureLogin = () => {
@@ -185,15 +192,10 @@ const loadMornSignPaper = async () => {
 };
 
 const computeScheduledTime = () => {
-  // 06:50:00 - 08:20:59 随机
   const datePart = reservationDate.value || new Date().toISOString().slice(0, 10);
-  const base = new Date(`${datePart}T06:50:00`);
-  const maxMinutes = 90; // 06:50 -> 08:20
-  const minutesOffset = Math.floor(Math.random() * (maxMinutes + 1));
-  const secondsOffset = Math.floor(Math.random() * 60);
-  base.setMinutes(base.getMinutes() + minutesOffset);
-  base.setSeconds(secondsOffset);
-  return base.toISOString();
+  const timePart = reservationTime.value || getDefaultTime();
+  const candidate = new Date(`${datePart}T${timePart}:00`);
+  return candidate.toISOString();
 };
 
 const jitterPoint = (point: MornSignPoint, meters = 10): MornSignPoint => {
@@ -263,7 +265,7 @@ const handleReserve = async () => {
   }
 
   const scheduledTime = computeScheduledTime();
-  const jitteredPoint = jitterPoint(target, 10); // 10米范围内随机
+  const jitteredPoint = target; // 不再抖动位置
   loadingReserve.value = true;
   try {
     const res = await $fetch<ReserveResponse>('/api/mornsign/reserve', {
@@ -380,7 +382,7 @@ watch(
         <div>
           <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            系统将在 06:50 ~ 08:20 间随机提交
+            可自由选择时间（精确到分钟）
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
@@ -405,6 +407,14 @@ watch(
             v-model="reservationDate"
             type="date"
             label="预约日期"
+            variant="outlined"
+          />
+        </VCol>
+        <VCol cols="12" md="6">
+          <VTextField
+            v-model="reservationTime"
+            type="time"
+            label="预约时间"
             variant="outlined"
           />
         </VCol>
