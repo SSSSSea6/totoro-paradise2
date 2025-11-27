@@ -69,14 +69,13 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
     deviceType: fake.deviceType,
-    phoneNumber: deviceInfo.phoneNumber,
     headImage: fake.headImage,
     baseStation: fake.baseStation,
     phoneInfo: fake.phoneInfo,
     mac: fake.mac,
     appVersion: fake.appVersion,
     // 默认尝试用 signType=1（逆向看到存在 0/1 分支），若任务或设备有值则优先使用
-    signType: (point as any).signType || deviceInfo.signType || '1',
+    signType: (point as any).signType || deviceInfo.signType || '0',
   };
 };
 
