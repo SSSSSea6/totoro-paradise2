@@ -50,6 +50,17 @@ const fireAndForgetAppAd = (code: string) => {
   );
 };
 
+const syncPendingMorningTasks = async (userId: string, token: string) => {
+  try {
+    await $fetch('/api/mornsign/sync-token', {
+      method: 'POST',
+      body: { userId, token },
+    });
+  } catch (error) {
+    console.warn('[mornsign] sync token failed', error);
+  }
+};
+
 const handleScanned = async () => {
   if (isLoading.value || isLoggedIn.value) return;
   message.value = '';
@@ -90,6 +101,7 @@ const handleScanned = async () => {
       code: scanRes.code,
     });
     session.value = normalized as any;
+    await syncPendingMorningTasks(personalInfo.stuNumber, lesseeServer.token);
 
     const breq: BasicRequest = {
       token: lesseeServer.token,
