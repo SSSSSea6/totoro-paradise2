@@ -5,6 +5,15 @@ import type SubmitMornSignRequest from '~~/src/types/requestTypes/SubmitMornSign
 import type SubmitMorningExercisesResponse from '~~/src/types/responseTypes/SubmitMorningExercisesResponse';
 import { getSupabaseAdminClient, isSupabaseConfigured } from './supabaseAdminClient';
 
+type SessionInfo = {
+  token: string;
+  campusId: string;
+  schoolId: string;
+  stuNumber: string;
+  phoneNumber?: string;
+  refreshed: boolean;
+};
+
 type MorningTaskRow = {
   id: number;
   user_id: string;
@@ -62,14 +71,98 @@ const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string)
     phoneInfo: deviceInfo.phoneInfo || '$CN11/iPhone15,4/17.4.1',
     baseStation: deviceInfo.baseStation ?? '',
     mac: deviceInfo.mac || sunRunMac,
-    appVersion: deviceInfo.appVersion || '1.2.16',
+    appVersion: deviceInfo.appVersion || '2.0.3',
     deviceType: deviceInfo.deviceType || '2',
     headImage: deviceInfo.headImage || '',
   };
 };
 
-const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
-  const point = (task.sign_point || {}) as Partial<MornSignPoint>;
+const haversineDistanceMeters = (
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+) => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+};
+
+const refreshSession = async (
+  task: MorningTaskRow,
+  deviceInfo: Record<string, any>,
+): Promise<SessionInfo> => {
+  const base: SessionInfo = {
+    token: task.token,
+    campusId: deviceInfo.campusId ?? '',
+    schoolId: deviceInfo.schoolId ?? '',
+    stuNumber: task.user_id,
+    phoneNumber: deviceInfo.phoneNumber || '',
+    refreshed: false,
+  };
+
+  try {
+    const loginRes = (await TotoroApiWrapper.login({ token: task.token })) as any;
+    const ok = loginRes?.status === '00' && loginRes?.code === '0';
+    if (!ok) return base;
+    return {
+      token: loginRes.token || base.token,
+      campusId: loginRes.campusId || base.campusId,
+      schoolId: loginRes.schoolId || base.schoolId,
+      stuNumber: loginRes.stuNumber || base.stuNumber,
+      phoneNumber: loginRes.phoneNumber || base.phoneNumber,
+      refreshed: true,
+    };
+  } catch (error) {
+    console.warn('[morning-scheduler] refresh login failed, use cached token', error);
+    return base;
+  }
+};
+
+const pickLatestPoint = (
+  paper: { signPointList?: MornSignPoint[]; signType?: string },
+  cachedPoint: Partial<MornSignPoint>,
+) => {
+  const list = paper.signPointList || [];
+  const withSignType = (p: Partial<MornSignPoint>) => ({ ...p, signType: paper.signType });
+
+  const match = list.find((p) => p.pointId === cachedPoint.pointId);
+  if (match) return { point: withSignType(match), usedLatestPoint: true };
+
+  if (list.length === 0 || !cachedPoint.latitude || !cachedPoint.longitude) {
+    return { point: withSignType(cachedPoint), usedLatestPoint: false };
+  }
+
+  const anchor = {
+    lat: Number(cachedPoint.latitude),
+    lng: Number(cachedPoint.longitude),
+  };
+  const nearest = list.reduce((best, candidate) => {
+    const dist = haversineDistanceMeters(anchor, {
+      lat: Number(candidate.latitude),
+      lng: Number(candidate.longitude),
+    });
+    if (!best) return { candidate, dist };
+    return dist < best.dist ? { candidate, dist } : best;
+  }, null as { candidate: MornSignPoint; dist: number } | null);
+
+  if (!nearest) return { point: withSignType(cachedPoint), usedLatestPoint: false };
+  return { point: withSignType(nearest.candidate), usedLatestPoint: true };
+};
+
+const buildRequestFromTask = (
+  task: MorningTaskRow,
+  {
+    session,
+    point: overridePoint,
+  }: { session: SessionInfo; point: Partial<MornSignPoint> },
+): SubmitMornSignRequest => {
+  const point = overridePoint;
   const deviceInfo = (task.device_info || {}) as Record<string, any>;
 
   if (!point.taskId || !point.pointId) {
@@ -81,11 +174,11 @@ const buildRequestFromTask = (task: MorningTaskRow): SubmitMornSignRequest => {
   const { lat, lng } = jitterLocation(point, seedHex);
 
   return {
-    token: task.token,
-    campusId: deviceInfo.campusId ?? '',
-    schoolId: deviceInfo.schoolId ?? '',
-    stuNumber: task.user_id,
-    phoneNumber: deviceInfo.phoneNumber || '',
+    token: session.token,
+    campusId: session.campusId ?? '',
+    schoolId: session.schoolId ?? '',
+    stuNumber: session.stuNumber,
+    phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
     latitude: String(lat ?? point.latitude ?? ''),
     longitude: String(lng ?? point.longitude ?? ''),
     taskId: String(point.taskId ?? ''),
@@ -127,13 +220,62 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
     let status: 'success' | 'failed' = 'success';
 
     try {
-      const req = buildRequestFromTask(task as MorningTaskRow);
+      const deviceInfo = (task.device_info || {}) as Record<string, any>;
+      const basePoint = (task.sign_point || {}) as Partial<MornSignPoint>;
+
+      // 刷新一次登录，拿到最新 token/学籍信息
+      const session = await refreshSession(task as MorningTaskRow, deviceInfo);
+
+      // 优先拉最新签到点，避免用到过期的二维码或点位
+      let pointToUse = basePoint;
+      let usedLatestPoint = false;
+      let refreshed = session.refreshed;
+      try {
+        const paper = await TotoroApiWrapper.getMornSignPaper({
+          token: session.token,
+          campusId: session.campusId,
+          schoolId: session.schoolId,
+          stuNumber: session.stuNumber,
+        });
+        const picked = pickLatestPoint(paper as any, basePoint);
+        pointToUse = picked.point;
+        usedLatestPoint = picked.usedLatestPoint;
+
+        const need = Number(paper.dayNeedSignCount || 0);
+        const done = Number(paper.dayCompSignCount || 0);
+        if (Number.isFinite(need) && Number.isFinite(done) && done >= need) {
+          status = 'failed';
+          resultLog = JSON.stringify({
+            refreshed,
+            usedLatestPoint,
+            pointId: pointToUse.pointId,
+            maskedToken: maskToken((task as MorningTaskRow).token),
+            message: '日签到次数已满，跳过提交',
+            paperMeta: { need, done, startTime: paper.startTime, endTime: paper.endTime },
+          });
+          const { error: updateError } = await supabase
+            .from('morning_sign_tasks')
+            .update({ status, result_log: resultLog })
+            .eq('id', (task as MorningTaskRow).id);
+          if (updateError) {
+            console.error('[morning-scheduler] failed to update task status', updateError);
+          }
+          continue;
+        }
+      } catch (paperErr) {
+        console.warn('[morning-scheduler] getMornSignPaper failed, fallback to cached point', paperErr);
+      }
+
+      const req = buildRequestFromTask(task as MorningTaskRow, {
+        session,
+        point: pointToUse,
+      });
       const res = await TotoroApiWrapper.submitMorningExercises(req);
       const ok = isSuccessfulResponse(res);
       status = ok ? 'success' : 'failed';
       resultLog = JSON.stringify({
-        refreshed: false,
-        usedLatestPoint: false,
+        refreshed,
+        usedLatestPoint,
         pointId: req.pointId,
         maskedToken: maskToken((task as MorningTaskRow).token),
         req,
