@@ -71,7 +71,7 @@ const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string)
     phoneInfo: deviceInfo.phoneInfo || '$CN11/iPhone15,4/17.4.1',
     baseStation: deviceInfo.baseStation ?? '',
     mac: deviceInfo.mac || sunRunMac,
-    appVersion: deviceInfo.appVersion || '2.0.3',
+    appVersion: deviceInfo.appVersion || '1.2.14',
     deviceType: deviceInfo.deviceType || '2',
     headImage: deviceInfo.headImage || '',
   };
