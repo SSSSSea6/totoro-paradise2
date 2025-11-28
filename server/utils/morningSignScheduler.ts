@@ -52,7 +52,7 @@ const jitterLocation = (point: Partial<MornSignPoint>, hexSeed: string) => {
   const lat = Number(point.latitude);
   const lng = Number(point.longitude);
   if (Number.isNaN(lat) || Number.isNaN(lng)) return { lat, lng };
-  const maxMeters = 8; // 控制在几米范围内抖动
+  const maxMeters = 10; // keep jitter within 10 meters
   const degLat = maxMeters / 111000;
   const degLng = maxMeters / (111000 * Math.cos((lat * Math.PI) / 180) || 1);
   const randLat = pseudoRandomFromHash(hexSeed, 0);
@@ -170,9 +170,20 @@ const buildRequestFromTask = (
   }
 
   const passthrough = passthroughDeviceInfo(deviceInfo);
-  // 按成功抓包保持原始经纬度与设备字段，不做抖动和填充
-  const lat = formatCoordinate(point.latitude);
-  const lng = formatCoordinate(point.longitude);
+  let lat = formatCoordinate(point.latitude);
+  let lng = formatCoordinate(point.longitude);
+
+  const jitterSeed = createHash('sha256')
+    .update(String(task.id ?? ''))
+    .update(task.scheduled_time ?? '')
+    .update(String(point.pointId ?? ''))
+    .update(String(point.taskId ?? ''))
+    .digest('hex');
+  const jittered = jitterLocation(point, jitterSeed);
+  if (Number.isFinite(jittered.lat) && Number.isFinite(jittered.lng)) {
+    lat = formatCoordinate(jittered.lat);
+    lng = formatCoordinate(jittered.lng);
+  }
 
   const req: SubmitMornSignRequest & { faceData?: string } = {
     token: session.token,
