@@ -240,28 +240,6 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
         const picked = pickLatestPoint(paper as any, basePoint);
         pointToUse = picked.point;
         usedLatestPoint = picked.usedLatestPoint;
-
-        const need = Number(paper.dayNeedSignCount || 0);
-        const done = Number(paper.dayCompSignCount || 0);
-        if (Number.isFinite(need) && Number.isFinite(done) && done >= need) {
-          status = 'failed';
-          resultLog = JSON.stringify({
-            refreshed,
-            usedLatestPoint,
-            pointId: pointToUse.pointId,
-            maskedToken: maskToken((task as MorningTaskRow).token),
-            message: '日签到次数已满，跳过提交',
-            paperMeta: { need, done, startTime: paper.startTime, endTime: paper.endTime },
-          });
-          const { error: updateError } = await supabase
-            .from('morning_sign_tasks')
-            .update({ status, result_log: resultLog })
-            .eq('id', (task as MorningTaskRow).id);
-          if (updateError) {
-            console.error('[morning-scheduler] failed to update task status', updateError);
-          }
-          continue;
-        }
       } catch (paperErr) {
         console.warn('[morning-scheduler] getMornSignPaper failed, fallback to cached point', paperErr);
       }
