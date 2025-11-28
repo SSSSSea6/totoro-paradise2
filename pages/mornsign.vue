@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TotoroApiWrapper from '~/src/wrappers/TotoroApiWrapper';
 import type MornSignPoint from '~/src/types/MornSignPoint';
-import type BasicRequest from '~/src/types/requestTypes/BasicRequest';
+import type MorningTaskRequest from '~/src/types/requestTypes/MorningTaskRequest';
 import normalizeSession from '~/src/utils/normalizeSession';
 
 type CreditsResponse = { success?: boolean; credits?: number; message?: string };
@@ -165,11 +165,16 @@ const loadMornSignPaper = async () => {
 
   fetchingPoints.value = true;
   try {
-    const breq: BasicRequest = {
+    const breq: MorningTaskRequest = {
       token: hydratedSession.value.token,
       campusId: hydratedSession.value.campusId,
       schoolId: hydratedSession.value.schoolId,
       stuNumber: hydratedSession.value.stuNumber,
+      phoneNumber:
+        hydratedSession.value.phoneNumber ||
+        (session.value as any)?.phoneNumber ||
+        (hydratedSession.value as any)?.phone ||
+        '',
     };
     const paper = await TotoroApiWrapper.getMornSignPaper(breq);
     signPoints.value = (paper.signPointList || []).map((p) => ({

@@ -68,6 +68,7 @@ const passthroughDeviceInfo = (deviceInfo: Record<string, any>) => ({
   baseStation: deviceInfo.baseStation ?? '',
   mac: deviceInfo.mac ?? '',
   appVersion: deviceInfo.appVersion ?? '',
+  headImage: deviceInfo.headImage ?? '',
 });
 
 const formatCoordinate = (value: string | number | undefined | null) => {
@@ -187,20 +188,19 @@ const buildRequestFromTask = (
 
   const req: SubmitMornSignRequest & { faceData?: string } = {
     token: session.token,
-    // 不发送 campusId/schoolId 以匹配成功抓包
-    campusId: undefined as any,
-    schoolId: undefined as any,
     stuNumber: session.stuNumber,
-    phoneNumber: '',
+    phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
     latitude: lat,
     longitude: lng,
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
+    headImage: passthrough.headImage,
     baseStation: passthrough.baseStation,
     phoneInfo: passthrough.phoneInfo,
     mac: passthrough.mac,
-    appVersion: passthrough.appVersion,
+    appVersion: passthrough.appVersion || '1.2.16',
+    signType: (point as any).signType || deviceInfo.signType || '',
     faceData: deviceInfo.faceData ?? '',
   };
 
@@ -249,6 +249,7 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
           campusId: session.campusId,
           schoolId: session.schoolId,
           stuNumber: session.stuNumber,
+          phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
         });
         const picked = pickLatestPoint(paper as any, basePoint);
         pointToUse = picked.point;

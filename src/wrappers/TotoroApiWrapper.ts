@@ -2,6 +2,8 @@ import ky from 'ky';
 import type { Point } from '../types/RunPoint';
 import type SubmitMornSignRequest from '../types/requestTypes/SubmitMornSignRequest';
 import type BasicRequest from '../types/requestTypes/BasicRequest';
+import type MorningTaskRequest from '../types/requestTypes/MorningTaskRequest';
+import type MorningScoreRequest from '../types/requestTypes/MorningScoreRequest';
 import type GetSchoolMonthByTermRequest from '../types/requestTypes/GetSchoolMonthByTermRequest';
 import type GetSchoolTermRequest from '../types/requestTypes/GetSchoolTermRequest';
 import type GetSunRunArchDetailRequest from '../types/requestTypes/GetSunRunArchDetailRequest';
@@ -22,6 +24,7 @@ import type GetSunRunArchDetailResponse from '../types/responseTypes/GetSunRunAr
 import type GetSunRunArchResponse from '../types/responseTypes/GetSunRunArchResponse';
 import type GetSunRunPaperResponse from '../types/responseTypes/GetSunRunPaperResponse';
 import type GetMornSignPaperResponse from '../types/responseTypes/GetMornSignPaperResponse';
+import type GetMornSignArchDetailResponse from '../types/responseTypes/GetMornSignArchDetailResponse';
 import type LoginResponse from '../types/responseTypes/LoginResponse';
 import type SunRunExercisesDetailResponse from '../types/responseTypes/SunRunExercisesDetailResponse';
 import type SunRunExercisesResponse from '../types/responseTypes/SunRunExercisesResponse';
@@ -226,9 +229,17 @@ const TotoroApiWrapper = {
       .json();
   },
 
-  async getMornSignPaper(req: BasicRequest): Promise<GetMornSignPaperResponse> {
+  async getMornSignPaper(req: MorningTaskRequest): Promise<GetMornSignPaperResponse> {
     return this.client
       .post('mornsign/getMornSignPaper', { body: encryptRequestContent(req) })
+      .json();
+  },
+
+  async getMornSignArchDetail(
+    req: MorningScoreRequest,
+  ): Promise<GetMornSignArchDetailResponse> {
+    return this.client
+      .post('mornsign/getMornSignArchDetail', { body: encryptRequestContent(req) })
       .json();
   },
 

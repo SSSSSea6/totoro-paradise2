@@ -11,5 +11,6 @@ export default interface GetMornSignPaperResponse extends BaseResponse {
   dayNeedSignCount: string;
   dayCompSignCount: string;
   minTimeInterval: string;
+  qrCode?: string;
   signPointList: MornSignPoint[];
 }

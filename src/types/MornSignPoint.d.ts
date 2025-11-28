@@ -5,4 +5,5 @@ export default interface MornSignPoint {
   pointId: string;
   pointName: string;
   qrCode?: string;
+  signType?: string;
 }
