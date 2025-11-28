@@ -63,19 +63,14 @@ const jitterLocation = (point: Partial<MornSignPoint>, hexSeed: string) => {
   };
 };
 
-const generateFakeDeviceInfo = (deviceInfo: Record<string, any>, userId: string) => {
-  // 与阳光跑保持一致：iPhone UA、空基站、学号哈希 MAC、固定版本
-  const hex = createHash('sha256').update(userId || 'anon').digest('hex');
-  const sunRunMac = hex.substring(0, 32);
-  return {
-    phoneInfo: deviceInfo.phoneInfo || '$CN11/iPhone15,4/17.4.1',
-    baseStation: deviceInfo.baseStation ?? '',
-    mac: deviceInfo.mac || sunRunMac,
-    appVersion: deviceInfo.appVersion || '1.2.14',
-    deviceType: deviceInfo.deviceType || '2',
-    headImage: deviceInfo.headImage || '',
-  };
-};
+const passthroughDeviceInfo = (deviceInfo: Record<string, any>) => ({
+  phoneInfo: deviceInfo.phoneInfo ?? '',
+  baseStation: deviceInfo.baseStation ?? '',
+  mac: deviceInfo.mac ?? '',
+  appVersion: deviceInfo.appVersion ?? '',
+  deviceType: deviceInfo.deviceType ?? '',
+  headImage: deviceInfo.headImage ?? '',
+});
 
 const haversineDistanceMeters = (
   a: { lat: number; lng: number },
@@ -169,29 +164,35 @@ const buildRequestFromTask = (
     throw new Error('Missing sign point information on task.');
   }
 
-  const fake = generateFakeDeviceInfo(deviceInfo, task.user_id);
-  const seedHex = createHash('md5').update(task.user_id || '').digest('hex');
-  const { lat, lng } = jitterLocation(point, seedHex);
+  const passthrough = passthroughDeviceInfo(deviceInfo);
+  // 按成功抓包保持原始经纬度与设备字段，不做抖动和填充
+  const lat = point.latitude;
+  const lng = point.longitude;
 
-  return {
+  const req: SubmitMornSignRequest = {
     token: session.token,
     campusId: session.campusId ?? '',
     schoolId: session.schoolId ?? '',
     stuNumber: session.stuNumber,
     phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
-    latitude: String(lat ?? point.latitude ?? ''),
-    longitude: String(lng ?? point.longitude ?? ''),
+    latitude: String(lat ?? ''),
+    longitude: String(lng ?? ''),
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
-    deviceType: fake.deviceType,
-    headImage: fake.headImage,
-    baseStation: fake.baseStation,
-    phoneInfo: fake.phoneInfo,
-    mac: fake.mac,
-    appVersion: fake.appVersion,
-    signType: (point as any).signType || deviceInfo.signType || '0',
   };
+
+  req.deviceType = passthrough.deviceType;
+  req.headImage = passthrough.headImage;
+  req.baseStation = passthrough.baseStation;
+  req.phoneInfo = passthrough.phoneInfo;
+  req.mac = passthrough.mac;
+  req.appVersion = passthrough.appVersion;
+
+  const signType = (point as any).signType || deviceInfo.signType;
+  if (signType) req.signType = signType;
+
+  return req;
 };
 
 export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> => {
