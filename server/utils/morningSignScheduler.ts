@@ -199,7 +199,7 @@ const buildRequestFromTask = (
     baseStation: passthrough.baseStation,
     phoneInfo: passthrough.phoneInfo,
     mac: passthrough.mac,
-    appVersion: passthrough.appVersion || '1.2.16',
+    appVersion: passthrough.appVersion || '1.2.14',
     signType: (point as any).signType || deviceInfo.signType || '',
     faceData: deviceInfo.faceData ?? '',
   };

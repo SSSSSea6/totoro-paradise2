@@ -256,7 +256,7 @@ const handleReserve = async () => {
     await loadMornSignPaper();
   }
   if (isPastDate(reservationDate.value)) {
-    notify('不能预约今天以前的日期');
+    notify('???????????');
     return;
   }
   const target =
