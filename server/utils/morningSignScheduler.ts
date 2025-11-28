@@ -180,7 +180,7 @@ const buildRequestFromTask = (
     campusId: undefined as any,
     schoolId: undefined as any,
     stuNumber: session.stuNumber,
-    phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
+    phoneNumber: '',
     latitude: lat,
     longitude: lng,
     taskId: String(point.taskId ?? ''),
