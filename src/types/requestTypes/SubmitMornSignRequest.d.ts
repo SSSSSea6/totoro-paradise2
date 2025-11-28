@@ -8,11 +8,11 @@ export default interface SubmitMornSignRequest extends BasicRequest {
   pointId: string;
   qrCode?: string;
   deviceType?: string;
-  phoneNumber?: string;
   headImage?: string;
   baseStation?: string;
   phoneInfo?: string;
   mac?: string;
   appVersion?: string;
   signType?: string;
+  faceData?: string;
 }

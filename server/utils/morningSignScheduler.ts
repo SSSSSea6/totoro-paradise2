@@ -68,9 +68,14 @@ const passthroughDeviceInfo = (deviceInfo: Record<string, any>) => ({
   baseStation: deviceInfo.baseStation ?? '',
   mac: deviceInfo.mac ?? '',
   appVersion: deviceInfo.appVersion ?? '',
-  deviceType: deviceInfo.deviceType ?? '',
-  headImage: deviceInfo.headImage ?? '',
 });
+
+const formatCoordinate = (value: string | number | undefined | null) => {
+  if (value === undefined || value === null || value === '') return '';
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  return numeric.toFixed(6);
+};
 
 const haversineDistanceMeters = (
   a: { lat: number; lng: number },
@@ -166,31 +171,27 @@ const buildRequestFromTask = (
 
   const passthrough = passthroughDeviceInfo(deviceInfo);
   // 按成功抓包保持原始经纬度与设备字段，不做抖动和填充
-  const lat = point.latitude;
-  const lng = point.longitude;
+  const lat = formatCoordinate(point.latitude);
+  const lng = formatCoordinate(point.longitude);
 
-  const req: SubmitMornSignRequest = {
+  const req: SubmitMornSignRequest & { faceData?: string } = {
     token: session.token,
-    campusId: session.campusId ?? '',
-    schoolId: session.schoolId ?? '',
+    // 不发送 campusId/schoolId 以匹配成功抓包
+    campusId: undefined as any,
+    schoolId: undefined as any,
     stuNumber: session.stuNumber,
     phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
-    latitude: String(lat ?? ''),
-    longitude: String(lng ?? ''),
+    latitude: lat,
+    longitude: lng,
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
+    baseStation: passthrough.baseStation,
+    phoneInfo: passthrough.phoneInfo,
+    mac: passthrough.mac,
+    appVersion: passthrough.appVersion,
+    faceData: deviceInfo.faceData ?? '',
   };
-
-  req.deviceType = passthrough.deviceType;
-  req.headImage = passthrough.headImage;
-  req.baseStation = passthrough.baseStation;
-  req.phoneInfo = passthrough.phoneInfo;
-  req.mac = passthrough.mac;
-  req.appVersion = passthrough.appVersion;
-
-  const signType = (point as any).signType || deviceInfo.signType;
-  if (signType) req.signType = signType;
 
   return req;
 };
