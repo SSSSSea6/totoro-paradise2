@@ -5,7 +5,7 @@ import type MorningTaskRequest from '~/src/types/requestTypes/MorningTaskRequest
 import normalizeSession from '~/src/utils/normalizeSession';
 
 type CreditsResponse = { success?: boolean; credits?: number; message?: string };
-type ReserveResponse = { success?: boolean; message?: string };
+type ReserveResponse = { success?: boolean; message?: string; scheduledTime?: string };
 type RecordItem = {
   id: number;
   scheduled_time: string;
@@ -26,8 +26,6 @@ const loadingRecords = ref(false);
 const signPoints = ref<MornSignPoint[]>([]);
 const records = ref<RecordItem[]>([]);
 const selectedPointId = ref('');
-const reservationDate = ref<string>(getDefaultDate());
-const reservationTime = ref<string>(getDefaultTime());
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
@@ -37,8 +35,8 @@ const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: str
   null,
 );
 const lastScheduledTime = ref('');
-const displayStart = '06:50';
-const displayEnd = '08:20';
+const displayStart = '06:35';
+const displayEnd = '08:25';
 
 const isLoggedIn = computed(() => Boolean(hydratedSession.value?.token));
 
@@ -46,18 +44,6 @@ const notify = (msg: string) => {
   snackbarMessage.value = msg;
   snackbar.value = true;
 };
-
-function getDefaultDate() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().slice(0, 10);
-}
-
-function getDefaultTime() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() + 5);
-  return now.toISOString().slice(11, 16); // HH:mm
-}
 
 const ensureLogin = () => {
   if (!isLoggedIn.value) {
@@ -187,13 +173,6 @@ const loadMornSignPaper = async () => {
   }
 };
 
-const computeScheduledTime = () => {
-  const datePart = reservationDate.value || new Date().toISOString().slice(0, 10);
-  const timePart = reservationTime.value || getDefaultTime();
-  const candidate = new Date(`${datePart}T${timePart}:00`);
-  return candidate.toISOString();
-};
-
 const jitterPoint = (point: MornSignPoint, meters = 10): MornSignPoint => {
   const lat = Number(point.latitude);
   const lng = Number(point.longitude);
@@ -252,7 +231,6 @@ const handleReserve = async () => {
     return;
   }
 
-  const scheduledTime = computeScheduledTime();
   const jitteredPoint = target; // 不再抖动位置
   loadingReserve.value = true;
   try {
@@ -262,7 +240,6 @@ const handleReserve = async () => {
         token: hydratedSession.value.token,
         userId: hydratedSession.value.stuNumber,
         signPoint: jitteredPoint,
-        scheduledTime,
         deviceInfo: {
           campusId: hydratedSession.value.campusId,
           schoolId: hydratedSession.value.schoolId,
@@ -274,7 +251,7 @@ const handleReserve = async () => {
     notify(res.message ?? '预约完成');
     if (res.success) {
       credits.value = Math.max(0, credits.value - 1);
-      lastScheduledTime.value = scheduledTime;
+      lastScheduledTime.value = res.scheduledTime || '';
       await loadRecords();
     }
   } catch (error) {
@@ -366,43 +343,28 @@ watch(
     <VCard v-if="isLoggedIn" class="p-4 space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-h6">预约早操签到</div>
+          <div class="text-h6">??????</div>
           <div class="text-caption text-gray-500">
-            可自由选择时间（精确到分钟）
+            ?????????? 06:35-08:25 ???????????????
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
-          重新获取点位
+          ??????
+        </VBtn>
         </VBtn>
       </div>
       <VRow dense>
-        <VCol cols="12" md="6">
+        <VCol cols="12" md="12">
           <VSelect
             v-model="selectedPointId"
             :items="signPoints"
             item-title="pointName"
             item-value="pointId"
-            label="签到点位"
+            label="????"
             :loading="fetchingPoints"
             variant="outlined"
           />
-          <div class="text-caption text-gray-500 mt-1">获取点位失败请多刷新几次</div>
-        </VCol>
-        <VCol cols="12" md="6">
-          <VTextField
-            v-model="reservationDate"
-            type="date"
-            label="预约日期"
-            variant="outlined"
-          />
-        </VCol>
-        <VCol cols="12" md="6">
-          <VTextField
-            v-model="reservationTime"
-            type="time"
-            label="预约时间"
-            variant="outlined"
-          />
+          <div class="text-caption text-gray-500 mt-1">???????????????????????????</div>
         </VCol>
       </VRow>
       <VBtn
