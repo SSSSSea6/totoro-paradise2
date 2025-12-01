@@ -28,14 +28,25 @@ const pickSchedule = (userId: string, desiredDate?: string): string => {
     }
   }
 
-  if (nowMinutes >= WINDOW_END_MIN) {
-    // 已过窗口，安排到下一天窗口
-    targetDate.setDate(targetDate.getDate() + 1);
-  } else if (nowMinutes >= WINDOW_START_MIN) {
-    // 窗口内，起始为当前分钟+1
-    start = Math.max(nowMinutes + 1, WINDOW_START_MIN);
+  const isTargetToday =
+    targetDate.getFullYear() === now.getFullYear() &&
+    targetDate.getMonth() === now.getMonth() &&
+    targetDate.getDate() === now.getDate();
+
+  if (isTargetToday) {
+    if (nowMinutes >= WINDOW_END_MIN) {
+      // 当天窗口已过，顺延到下一天窗口
+      targetDate.setDate(targetDate.getDate() + 1);
+    } else if (nowMinutes >= WINDOW_START_MIN) {
+      // 当天窗口内，从当前分钟之后开始随机
+      start = Math.max(nowMinutes + 1, WINDOW_START_MIN);
+    } else {
+      // 当天窗口未开始，使用默认窗口
+    }
   } else {
-    // 窗口未开始，保持今日窗口
+    // 目标为未来日期，使用固定窗口
+    start = WINDOW_START_MIN;
+    end = WINDOW_END_MIN;
   }
 
   // 随机分钟，尽量分散
