@@ -32,12 +32,8 @@ const snackbarMessage = ref('');
 const redeemDialog = ref(false);
 const redeemCode = ref('');
 const redeemLinksDialog = ref(false);
-const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(
-  null,
-);
+const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(null);
 const lastScheduledTime = ref('');
-const displayStart = '06:35';
-const displayEnd = '08:25';
 
 const isLoggedIn = computed(() => Boolean(hydratedSession.value?.token));
 
@@ -278,7 +274,6 @@ onMounted(() => {
     router.push('/login?redirect=/mornsign');
     return;
   }
-  // 进入页时刷新一次信息，确保显示当前账号
   session.value = normalizeSession(localStorage.getItem('totoroSession') || session.value || {});
   hydrateSession();
   fetchCredits();
@@ -337,7 +332,7 @@ watch(
         <div>
           <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            时间分配在 06:35-08:25 之间。
+            时间分配在 06:35-08:25 之间（仅未来时间）。
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
