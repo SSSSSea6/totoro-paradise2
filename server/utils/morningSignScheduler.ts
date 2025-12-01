@@ -180,26 +180,22 @@ const buildRequestFromTask = (
     .update(String(point.pointId ?? ''))
     .update(String(point.taskId ?? ''))
     .digest('hex');
-  const jittered = jitterLocation(point, jitterSeed);
-  if (Number.isFinite(jittered.lat) && Number.isFinite(jittered.lng)) {
-    lat = formatCoordinate(jittered.lat);
-    lng = formatCoordinate(jittered.lng);
-  }
+  // 使用原始经纬度，避免抖动
 
   const req: SubmitMornSignRequest & { faceData?: string } = {
     token: session.token,
     stuNumber: session.stuNumber,
-    phoneNumber: session.phoneNumber || deviceInfo.phoneNumber || '',
+    phoneNumber: '', // 抓包为空，保持空字符串
     latitude: lat,
     longitude: lng,
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
-    headImage: passthrough.headImage || '',
-    baseStation: passthrough.baseStation || '',
-    phoneInfo: passthrough.phoneInfo || 'CN11/iPhone15,4/17.4.1', // 填充设备信息，避免为空导致校验失败
-    mac: passthrough.mac || '',
-    appVersion: passthrough.appVersion || '1.2.14',
+    headImage: '', // 抓包为空
+    baseStation: '', // 抓包为空
+    phoneInfo: '', // 抓包为空
+    mac: '', // 抓包为空
+    appVersion: '', // 抓包为空
     signType: (point as any).signType || deviceInfo.signType || '',
     faceData: deviceInfo.faceData ?? '',
   };
