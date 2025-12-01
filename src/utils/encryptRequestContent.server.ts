@@ -1,32 +1,34 @@
 import crypto from 'crypto';
 import rsaKeys from '../data/rsaKeys';
 
-const buildPrivateKeyPem = (): string => {
-  const envB64 = process.env.PRIVATE_KEY_BASE64;
-  const envPem = process.env.PRIVATE_KEY;
+const buildPublicKeyPem = (): string => {
+  // 优先环境变量，其次内置公钥
+  const envB64 = process.env.PUBLIC_KEY_BASE64;
+  const envPem = process.env.PUBLIC_KEY;
   let pem = '';
   if (envB64) {
     pem = Buffer.from(envB64, 'base64').toString('utf-8');
   } else if (envPem) {
     pem = envPem;
   } else {
-    pem = rsaKeys.privateKey;
+    pem = rsaKeys.publicKey;
   }
   return pem.replace(/\\n/g, '\n').trim();
 };
 
 const encryptRequestContent = (req: Record<string, any>): string => {
-  const keyPem = buildPrivateKeyPem();
-  const keyObject = crypto.createPrivateKey(keyPem);
-  const keySize = keyObject.asymmetricKeySize; // in bytes
-  const maxChunkSize = keySize - 11; // PKCS#1 v1.5 padding overhead
+  // 与官方客户端一致：使用公钥 PKCS#1 v1.5 分块加密
+  const keyPem = buildPublicKeyPem();
+  const keyObject = crypto.createPublicKey(keyPem);
+  const keySize = keyObject.asymmetricKeySize; // bytes
+  const maxChunkSize = keySize - 11; // PKCS#1 v1.5 padding
 
   const buffer = Buffer.from(JSON.stringify(req), 'utf8');
   const chunks: Buffer[] = [];
 
   for (let offset = 0; offset < buffer.length; offset += maxChunkSize) {
     const chunk = buffer.slice(offset, offset + maxChunkSize);
-    const encryptedChunk = crypto.privateEncrypt(
+    const encryptedChunk = crypto.publicEncrypt(
       {
         key: keyObject,
         padding: crypto.constants.RSA_PKCS1_PADDING,

@@ -195,11 +195,11 @@ const buildRequestFromTask = (
     taskId: String(point.taskId ?? ''),
     pointId: String(point.pointId ?? ''),
     qrCode: point.qrCode,
-    headImage: passthrough.headImage,
+    headImage: passthrough.headImage, // 官方样本为空即可
     baseStation: passthrough.baseStation,
     phoneInfo: passthrough.phoneInfo,
     mac: passthrough.mac,
-    appVersion: passthrough.appVersion || '1.2.14',
+    appVersion: passthrough.appVersion || '', // 官方样本留空
     signType: (point as any).signType || deviceInfo.signType || '',
     faceData: deviceInfo.faceData ?? '',
   };
