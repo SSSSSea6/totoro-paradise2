@@ -67,6 +67,25 @@ export default defineEventHandler(async (event) => {
   // 统一在服务端生成预约时间，窗口 06:35~08:25 且仅允许当前/未来时间
   const scheduledTime = pickSchedule(userId, desiredDate);
 
+  // ??????????
+  const startOfDay = new Date(scheduledTime);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const { data: existsTask, error: existsError } = await supabase
+    .from('morning_sign_tasks')
+    .select('id')
+    .eq('user_id', userId)
+    .gte('scheduled_time', startOfDay.toISOString())
+    .lte('scheduled_time', endOfDay.toISOString())
+    .limit(1)
+    .maybeSingle();
+
+  if (!existsError && existsTask) {
+    return { success: false, message: '?????????' };
+  }
+
   const { data: creditData, error: creditError } = await supabase
     .from('user_credits')
     .select('credits')
