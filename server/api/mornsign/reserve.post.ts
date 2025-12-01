@@ -2,10 +2,12 @@ import { getSupabaseAdminClient, isSupabaseConfigured } from '../../utils/supaba
 
 const WINDOW_START_MIN = 6 * 60 + 35; // 06:35
 const WINDOW_END_MIN = 8 * 60 + 25; // 08:25
+const TZ_OFFSET_MS = 8 * 60 * 60 * 1000; // 北京时区相对 UTC 的偏移（+8h）
 
 const minutesOfDay = (date: Date) => date.getHours() * 60 + date.getMinutes();
 
-const pickSchedule = (userId: string, desiredDate?: string): string => {
+// 返回本地（北京时间）预约时间的 Date 对象
+const pickSchedule = (desiredDate?: string): Date => {
   const now = new Date();
   const nowMinutes = minutesOfDay(now);
 
@@ -58,7 +60,7 @@ const pickSchedule = (userId: string, desiredDate?: string): string => {
   targetDate.setHours(0, 0, 0, 0);
   targetDate.setMinutes(chosenMinutes);
 
-  return targetDate.toISOString();
+  return targetDate;
 };
 
 export default defineEventHandler(async (event) => {
@@ -75,26 +77,31 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdminClient();
 
-  // 统一在服务端生成预约时间，窗口 06:35~08:25 且仅允许当前/未来时间
-  const scheduledTime = pickSchedule(userId, desiredDate);
+  // 生成北京时间预约时间
+  const scheduledLocal = pickSchedule(desiredDate);
+  // 转为 UTC 入库（北京时间 -8 小时）
+  const scheduledUtc = new Date(scheduledLocal.getTime() - TZ_OFFSET_MS);
 
-  // ??????????
-  const startOfDay = new Date(scheduledTime);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setHours(23, 59, 59, 999);
+  // 同一天仅可预约一次（按北京时间判定）
+  const startOfDayLocal = new Date(scheduledLocal);
+  startOfDayLocal.setHours(0, 0, 0, 0);
+  const endOfDayLocal = new Date(startOfDayLocal);
+  endOfDayLocal.setHours(23, 59, 59, 999);
+
+  const startOfDayUtc = new Date(startOfDayLocal.getTime() - TZ_OFFSET_MS);
+  const endOfDayUtc = new Date(endOfDayLocal.getTime() - TZ_OFFSET_MS);
 
   const { data: existsTask, error: existsError } = await supabase
     .from('morning_sign_tasks')
     .select('id')
     .eq('user_id', userId)
-    .gte('scheduled_time', startOfDay.toISOString())
-    .lte('scheduled_time', endOfDay.toISOString())
+    .gte('scheduled_time', startOfDayUtc.toISOString())
+    .lte('scheduled_time', endOfDayUtc.toISOString())
     .limit(1)
     .maybeSingle();
 
   if (!existsError && existsTask) {
-    return { success: false, message: '?????????' };
+    return { success: false, message: '同一天只能预约一次' };
   }
 
   const { data: creditData, error: creditError } = await supabase
@@ -126,7 +133,7 @@ export default defineEventHandler(async (event) => {
     token,
     device_info: deviceInfo || null,
     sign_point: signPoint,
-    scheduled_time: scheduledTime,
+    scheduled_time: scheduledUtc.toISOString(),
     status: 'pending',
   });
 
@@ -134,5 +141,5 @@ export default defineEventHandler(async (event) => {
     return { success: false, message: `预约失败: ${insertError.message}` };
   }
 
-  return { success: true, message: '预约成功', scheduledTime };
+  return { success: true, message: '预约成功', scheduledTime: scheduledUtc.toISOString() };
 });
