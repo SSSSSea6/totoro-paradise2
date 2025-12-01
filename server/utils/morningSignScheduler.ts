@@ -196,7 +196,6 @@ const buildRequestFromTask = (
     phoneInfo: '', // 抓包为空
     mac: '', // 抓包为空
     appVersion: '', // 抓包为空
-    signType: (point as any).signType || deviceInfo.signType || '',
     faceData: deviceInfo.faceData ?? '',
   };
 
