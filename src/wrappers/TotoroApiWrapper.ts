@@ -133,6 +133,13 @@ const TotoroApiWrapper = {
     return this.client.post('sunrun/getSunrunPaper', { body: encryptRequestContent(req) }).json();
   },
 
+  async getSunRunPaperNew(req: BasicRequest): Promise<GetSunRunPaperResponse> {
+    // 新接口（客户端抓包显示使用 sunrunNew/getSunrunPaper）
+    return this.client
+      .post('sunrunNew/getSunrunPaper', { body: encryptRequestContent(req) })
+      .json();
+  },
+
   async getRunBegin(req: BasicRequest) {
     return await this.client
       .post('sunrun/getRunBegin', {
@@ -141,9 +148,24 @@ const TotoroApiWrapper = {
       .json<GetRunBeginResponse>();
   },
 
+  async getFreerunPaper(req: BasicRequest) {
+    return this.client
+      .post('sunrun/getFreerunPaper', { body: encryptRequestContent(req) })
+      .json();
+  },
+
   async sunRunExercises(req: SunRunExercisesRequest): Promise<SunRunExercisesResponse> {
     return this.client
       .post('platform/recrecord/sunRunExercises', {
+        body: encryptRequestContent(req),
+      })
+      .json();
+  },
+
+  async freeRunExercises(req: any): Promise<SunRunExercisesResponse> {
+    // 自由跑使用 recrecordNew/sunRunExercises，runType=1
+    return this.client
+      .post('platform/recrecordNew/sunRunExercises', {
         body: encryptRequestContent(req),
       })
       .json();

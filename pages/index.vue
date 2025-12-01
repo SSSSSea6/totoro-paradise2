@@ -175,6 +175,15 @@ const goSunRun = () => {
   router.push('/scanned');
 };
 
+const goFreeRun = () => {
+  if (!isLoggedIn.value) {
+    snackbar.value = true;
+    message.value = '请先扫码登录';
+    return;
+  }
+  router.push('/freerun');
+};
+
 const goMornSign = () => {
   if (!isLoggedIn.value) {
     snackbar.value = true;
@@ -215,6 +224,16 @@ const goMornSign = () => {
         @click="goSunRun"
       >
         阳光跑
+      </VBtn>
+      <VBtn
+        color="green"
+        block
+        height="56"
+        :disabled="!isLoggedIn"
+        append-icon="i-mdi-map"
+        @click="goFreeRun"
+      >
+        自由跑
       </VBtn>
       <VBtn
         color="blue"

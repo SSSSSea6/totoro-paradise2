@@ -20,8 +20,14 @@ const encryptRequestContent = (req: Record<string, any>): string => {
   // 与官方客户端一致：使用公钥 PKCS#1 v1.5 分块加密
   const keyPem = buildPublicKeyPem();
   const keyObject = crypto.createPublicKey(keyPem);
-  const keySize = keyObject.asymmetricKeySize; // bytes
-  const maxChunkSize = keySize - 11; // PKCS#1 v1.5 padding
+  // Node 22 移除了 asymmetricKeySize，改用 modulusLength 获取密钥位数
+  const modulusBits =
+    keyObject.asymmetricKeyDetails?.modulusLength ?? (keyObject as any).asymmetricKeySize ?? 0;
+  const keySizeBytes = Math.floor(modulusBits / 8);
+  if (!keySizeBytes) {
+    throw new Error('Failed to determine RSA key size for request encryption');
+  }
+  const maxChunkSize = keySizeBytes - 11; // PKCS#1 v1.5 padding
 
   const buffer = Buffer.from(JSON.stringify(req), 'utf8');
   const chunks: Buffer[] = [];
