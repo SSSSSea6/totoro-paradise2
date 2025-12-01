@@ -67,16 +67,6 @@ const ensureLogin = () => {
   return true;
 };
 
-const isPastDate = (dateStr?: string) => {
-  if (!dateStr) return false;
-  const selected = new Date(dateStr);
-  if (Number.isNaN(selected.getTime())) return true;
-  selected.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return selected < today;
-};
-
 const displayName = computed(() => {
   if (!hydratedSession.value) return '未登录';
   return hydratedSession.value.stuName || (hydratedSession.value as any).name || '已登录';
@@ -254,10 +244,6 @@ const handleReserve = async () => {
   }
   if (!signPoints.value.length) {
     await loadMornSignPaper();
-  }
-  if (isPastDate(reservationDate.value)) {
-    notify('???????????');
-    return;
   }
   const target =
     signPoints.value.find((p) => p.pointId === selectedPointId.value) || signPoints.value[0];

@@ -19,12 +19,6 @@ export default defineEventHandler(async (event) => {
     return { success: false, message: '预约时间无效' };
   }
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  if (scheduled < todayStart) {
-    return { success: false, message: '不能预约今天以前的日期' };
-  }
-
   const { data: creditData, error: creditError } = await supabase
     .from('user_credits')
     .select('credits')
