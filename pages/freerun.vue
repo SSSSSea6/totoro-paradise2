@@ -242,8 +242,8 @@ watch(
         </VCol>
       </VRow>
 
-      <VBtn color="orange" block :loading="isLoading" @click="handleRun">
-        提交自由跑
+      <VBtn color="orange" block :loading="isLoading" disabled>
+        自由跑已迁出，请稍后
       </VBtn>
     </VCard>
 
