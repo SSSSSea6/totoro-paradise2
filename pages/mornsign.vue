@@ -26,6 +26,7 @@ const loadingRecords = ref(false);
 const signPoints = ref<MornSignPoint[]>([]);
 const records = ref<RecordItem[]>([]);
 const selectedPointId = ref('');
+const reservationDate = ref<string>(getDefaultDate());
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
@@ -44,6 +45,11 @@ const notify = (msg: string) => {
   snackbarMessage.value = msg;
   snackbar.value = true;
 };
+
+function getDefaultDate() {
+  const today = new Date();
+  return today.toISOString().slice(0, 10);
+}
 
 const ensureLogin = () => {
   if (!isLoggedIn.value) {
@@ -173,21 +179,6 @@ const loadMornSignPaper = async () => {
   }
 };
 
-const jitterPoint = (point: MornSignPoint, meters = 10): MornSignPoint => {
-  const lat = Number(point.latitude);
-  const lng = Number(point.longitude);
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return point;
-  // 简单抖动：在指定米数内随机偏移
-  const degLat = meters / 111000; // 1度纬度约111km
-  const degLng = meters / (111000 * Math.cos((lat * Math.PI) / 180) || 1);
-  const rnd = () => (Math.random() - 0.5) * 2; // -1~1
-  return {
-    ...point,
-    latitude: (lat + rnd() * degLat).toString(),
-    longitude: (lng + rnd() * degLng).toString(),
-  };
-};
-
 const handleRedeem = async () => {
   if (!ensureLogin()) return;
   if (!redeemCode.value.trim()) {
@@ -240,6 +231,7 @@ const handleReserve = async () => {
         token: hydratedSession.value.token,
         userId: hydratedSession.value.stuNumber,
         signPoint: jitteredPoint,
+        desiredDate: reservationDate.value,
         deviceInfo: {
           campusId: hydratedSession.value.campusId,
           schoolId: hydratedSession.value.schoolId,
@@ -343,27 +335,34 @@ watch(
     <VCard v-if="isLoggedIn" class="p-4 space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-h6">???????</div>
+          <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            ?????? 06:35-08:25 ??????
+            时间分配在 06:35-08:25 之间。
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
-          ???????
+          重新获取点位
         </VBtn>
       </div>
       <VRow dense>
-        <VCol cols="12" md="12">
+        <VCol cols="12" md="6">
           <VSelect
             v-model="selectedPointId"
             :items="signPoints"
             item-title="pointName"
             item-value="pointId"
-            label="????"
+            label="签到点位"
             :loading="fetchingPoints"
             variant="outlined"
           />
-          <div class="text-caption text-gray-500 mt-1">???????????</div>
+        </VCol>
+        <VCol cols="12" md="6">
+          <VTextField
+            v-model="reservationDate"
+            type="date"
+            label="预约日期"
+            variant="outlined"
+          />
         </VCol>
       </VRow>
       <VBtn
@@ -399,7 +398,7 @@ watch(
             <td>{{ formatDateTime(rec.scheduled_time) }}</td>
             <td>{{ rec.status }}</td>
             <td class="max-w-80 whitespace-pre-wrap text-sm text-gray-600">
-              {{ rec.result_log || '—' }}
+              {{ rec.result_log || '无' }}
             </td>
           </tr>
         </tbody>
@@ -432,7 +431,6 @@ watch(
         </VCardActions>
       </VCard>
     </VDialog>
-
 
     <VDialog v-model="redeemLinksDialog" max-width="420">
       <VCard title="获取兑换码">
@@ -496,7 +494,6 @@ watch(
         </VCardActions>
       </VCard>
     </VDialog>
-
 
     <VSnackbar v-model="snackbar" :timeout="3000">
       {{ snackbarMessage }}

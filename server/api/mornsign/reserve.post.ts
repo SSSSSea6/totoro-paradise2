@@ -5,13 +5,28 @@ const WINDOW_END_MIN = 8 * 60 + 25; // 08:25
 
 const minutesOfDay = (date: Date) => date.getHours() * 60 + date.getMinutes();
 
-const pickSchedule = (userId: string): string => {
+const pickSchedule = (userId: string, desiredDate?: string): string => {
   const now = new Date();
   const nowMinutes = minutesOfDay(now);
 
   let targetDate = new Date(now);
   let start = WINDOW_START_MIN;
   let end = WINDOW_END_MIN;
+
+  // 如果传入了日期，优先使用该日期（仅日期部分），小于今天则修正到今天
+  if (desiredDate) {
+    const parsed = new Date(desiredDate);
+    if (!Number.isNaN(parsed.getTime())) {
+      parsed.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (parsed < today) {
+        targetDate = today;
+      } else {
+        targetDate = parsed;
+      }
+    }
+  }
 
   if (nowMinutes >= WINDOW_END_MIN) {
     // 已过窗口，安排到下一天窗口
@@ -41,7 +56,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { token, userId, signPoint, deviceInfo } = body || {};
+  const { token, userId, signPoint, deviceInfo, desiredDate } = body || {};
 
   if (!token || !userId || !signPoint) {
     return { success: false, message: '缺少必要参数' };
@@ -50,7 +65,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdminClient();
 
   // 统一在服务端生成预约时间，窗口 06:35~08:25 且仅允许当前/未来时间
-  const scheduledTime = pickSchedule(userId);
+  const scheduledTime = pickSchedule(userId, desiredDate);
 
   const { data: creditData, error: creditError } = await supabase
     .from('user_credits')
