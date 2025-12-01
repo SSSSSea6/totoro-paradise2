@@ -27,6 +27,7 @@ const signPoints = ref<MornSignPoint[]>([]);
 const records = ref<RecordItem[]>([]);
 const selectedPointId = ref('');
 const reservationDate = ref<string>(getDefaultDate());
+const reservationTime = ref<string>(getDefaultTime());
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
@@ -46,6 +47,19 @@ function getDefaultDate() {
   const today = new Date();
   return today.toISOString().slice(0, 10);
 }
+
+function getDefaultTime() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 5);
+  return now.toISOString().slice(11, 16); // HH:mm
+}
+
+const computeScheduledTime = () => {
+  const datePart = reservationDate.value || getDefaultDate();
+  const timePart = reservationTime.value || getDefaultTime();
+  const candidate = new Date(`${datePart}T${timePart}:00`);
+  return candidate.toISOString();
+};
 
 const ensureLogin = () => {
   if (!isLoggedIn.value) {
@@ -221,13 +235,14 @@ const handleReserve = async () => {
   const jitteredPoint = target; // 不再抖动位置
   loadingReserve.value = true;
   try {
+    const scheduledTime = computeScheduledTime();
     const res = await $fetch<ReserveResponse>('/api/mornsign/reserve', {
       method: 'POST',
       body: {
         token: hydratedSession.value.token,
         userId: hydratedSession.value.stuNumber,
         signPoint: jitteredPoint,
-        desiredDate: reservationDate.value,
+        scheduledTime,
         deviceInfo: {
           campusId: hydratedSession.value.campusId,
           schoolId: hydratedSession.value.schoolId,
@@ -239,7 +254,7 @@ const handleReserve = async () => {
     notify(res.message ?? '预约完成');
     if (res.success) {
       credits.value = Math.max(0, credits.value - 1);
-      lastScheduledTime.value = res.scheduledTime || '';
+      lastScheduledTime.value = res.scheduledTime || scheduledTime;
       await loadRecords();
     }
   } catch (error) {
@@ -332,7 +347,7 @@ watch(
         <div>
           <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            时间分配在 06:35-08:25 之间（仅未来时间）。
+            请选择预约日期和时间（可自选任意时间，用于测试）。
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
@@ -351,11 +366,19 @@ watch(
             variant="outlined"
           />
         </VCol>
-        <VCol cols="12" md="6">
+        <VCol cols="12" md="3">
           <VTextField
             v-model="reservationDate"
             type="date"
             label="预约日期"
+            variant="outlined"
+          />
+        </VCol>
+        <VCol cols="12" md="3">
+          <VTextField
+            v-model="reservationTime"
+            type="time"
+            label="预约时间"
             variant="outlined"
           />
         </VCol>
