@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import rsaKeys from '../data/rsaKeys';
 
 const buildPublicKeyPem = (): string => {
-  // 优先环境变量，其次内置公钥
+  // 优先使用环境变量，其次内置公钥
   const envB64 = process.env.PUBLIC_KEY_BASE64;
   const envPem = process.env.PUBLIC_KEY;
   let pem = '';
@@ -20,7 +20,7 @@ const encryptRequestContent = (req: Record<string, any>): string => {
   // 与官方客户端一致：使用公钥 PKCS#1 v1.5 分块加密
   const keyPem = buildPublicKeyPem();
   const keyObject = crypto.createPublicKey(keyPem);
-  // Node 22 移除了 asymmetricKeySize，改用 modulusLength 获取密钥位数
+  // Node 22 移除了 asymmetricKeySize，这里改为 modulusLength 获取密钥位数
   const modulusBits =
     keyObject.asymmetricKeyDetails?.modulusLength ?? (keyObject as any).asymmetricKeySize ?? 0;
   const keySizeBytes = Math.floor(modulusBits / 8);

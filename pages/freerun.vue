@@ -111,6 +111,10 @@ const handleRedeem = async () => {
 
 const handleRun = async () => {
   if (!ensureLogin()) return;
+  if (km.value < 0.5 || km.value > 3.2) {
+    notify('里程范围仅支持 0.5~3.2km');
+    return;
+  }
   isLoading.value = true;
   try {
     const res = await $fetch<RunResponse>('/api/freerun/run', {
@@ -226,9 +230,9 @@ watch(
             label="目标里程（km）"
             variant="outlined"
             :min="0.5"
-            :max="5"
+            :max="3.2"
             step="0.01"
-            hint="范围 0.5 ~ 5.0 km"
+            hint="范围 0.5 ~ 3.2 km"
             persistent-hint
           />
         </VCol>
@@ -296,3 +300,4 @@ watch(
     </VSnackbar>
   </div>
 </template>
+

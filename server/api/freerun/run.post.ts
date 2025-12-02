@@ -205,8 +205,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const baseKm = Number(km) || 1.01;
-  if (baseKm < 0.5 || baseKm > 5) {
-    return { success: false, message: '长度过短，仅支持 0.5~5km' };
+  if (baseKm < 0.5 || baseKm > 3.2) {
+    return { success: false, message: '长度不合法，仅支持 0.5~3.2km' };
   }
 
   const maybeConsumeFreeRunCredit = async () => {
@@ -335,6 +335,8 @@ export default defineEventHandler(async (event) => {
   const start = new Date();
   const extraKm = parseFloat((0.02 + Math.random() * 0.08).toFixed(2));
   let targetKm = parseFloat((baseKm + extraKm).toFixed(2));
+  // 保持不超出总上限 3.2km
+  if (targetKm > 3.2) targetKm = 3.2;
   if (Number.isInteger(targetKm)) targetKm += 0.01;
   const paceSecondsPerKm = Math.floor(5 * 60 + Math.random() * (4 * 60)); // 5~9 分/公里，秒级随机
   const usedSeconds = Math.max(60, Math.round(paceSecondsPerKm * targetKm));
