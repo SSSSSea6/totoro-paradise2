@@ -10,6 +10,7 @@ const { data, refresh, pending } = await useFetch<{ uuid: string; imgUrl: string
 );
 const message = ref('');
 const snackbar = ref(false);
+const welcomeSnackbar = ref(true);
 const isLoading = ref(false);
 const session = useSession();
 
@@ -254,6 +255,9 @@ const goMornSign = () => {
     </div>
     <VSnackbar v-model="snackbar" :timeout="3000">
       {{ message }}
+    </VSnackbar>
+    <VSnackbar v-model="welcomeSnackbar" :timeout="4000">
+      新增自由跑功能，欢迎使用
     </VSnackbar>
   </div>
 </template>
