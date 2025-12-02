@@ -33,11 +33,12 @@ import type UpdateAppVersionResponse from '../types/responseTypes/UpdateAppVersi
 import encryptRequestContent from '../utils/encryptRequestContent';
 
 const isServer = typeof window === 'undefined';
-const localBase = isServer ? `http://127.0.0.1:${process.env.PORT || 3000}` : '';
+// 服务端直接直连目标域，避免容器内回环；客户端仍走本地代理
+const prefixUrl = isServer ? 'https://app.xtotoro.com/app' : '/api/totoro';
 
 const TotoroApiWrapper = {
   client: ky.create({
-    prefixUrl: `${localBase}/api/totoro`,
+    prefixUrl,
     timeout: 12000,
     retry: {
       limit: 2,
@@ -49,7 +50,9 @@ const TotoroApiWrapper = {
       Host: 'app.xtotoro.com',
       Connection: 'Keep-Alive',
       'Accept-Encoding': 'gzip',
-      'User-Agent': 'okhttp/4.9.0',
+      'User-Agent': isServer
+        ? 'TotoroSchool/1.2.16 (iPhone; iOS 26.1; Scale/3.00)'
+        : 'okhttp/4.9.0',
     },
   }),
 
