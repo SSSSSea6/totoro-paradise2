@@ -181,6 +181,12 @@ const goFreeRun = () => {
     message.value = '请先扫码登录';
     return;
   }
+    const pwd = window.prompt('请输入访问自由跑的密码');
+  if (pwd !== '982108244Qq') {
+    snackbar.value = true;
+    message.value = '密码错误，无法进入';
+    return;
+  }
   router.push('/freerun');
 };
 
