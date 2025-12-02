@@ -1,38 +1,32 @@
-﻿import crypto from "crypto";
-import { publicKeyBody } from "../data/rsaKeys";
+import crypto from 'crypto';
+import { publicKeyBody } from '../data/rsaKeys';
 
+/**
+ * 使用 DER 直接加载公钥，彻底绕过 PEM 换行/头尾解析问题。
+ */
 const encryptRequestContent = (req: Record<string, any>): string => {
   const debug = process.env.ENCRYPT_DEBUG === 'true';
-  const raw = Buffer.from(publicKeyBody, 'base64');
+  let keyObject: crypto.KeyObject;
 
-  let keyObject: crypto.KeyObject | null = null;
-  let lastErr: any = null;
-
-  for (const type of ['spki', 'pkcs1'] as const) {
-    try {
-      keyObject = crypto.createPublicKey({ key: raw, format: 'der', type });
-      if (debug) console.log(`[encrypt] createPublicKey ok with type=${type}`);
-      break;
-    } catch (error: any) {
-      lastErr = error;
-      console.error(`[encrypt] createPublicKey (${type}) failed:`, error?.message);
-    }
-  }
-
-  if (!keyObject) {
-    throw new Error('公钥构造失败 ' + (lastErr?.message || 'unknown'));
+  try {
+    keyObject = crypto.createPublicKey({
+      key: Buffer.from(publicKeyBody, 'base64'),
+      format: 'der',
+      type: 'spki',
+    });
+  } catch (error: any) {
+    console.error('[encrypt] createPublicKey (DER spki) failed:', error?.message);
+    throw new Error('公钥构造失败: ' + (error?.message || 'unknown'));
   }
 
   const modulusBits =
     keyObject.asymmetricKeyDetails?.modulusLength ?? (keyObject as any).asymmetricKeySize ?? 0;
-
   if (typeof modulusBits !== 'number' || !Number.isInteger(modulusBits) || modulusBits <= 0) {
     console.error('[encrypt] invalid modulusLength:', modulusBits);
     throw new Error('密钥模长无效');
   }
 
   const maxChunkSize = Math.floor(modulusBits / 8) - 11; // PKCS#1 v1.5 padding
-
   if (debug) {
     console.log(`[encrypt] ready. modulusBits=${modulusBits}, chunk=${maxChunkSize} bytes.`);
   }

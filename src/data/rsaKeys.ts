@@ -1,5 +1,6 @@
-﻿// sssssea6/totoro-paradise2/totoro-paradise2-56d476fc4dd56da1d8091e1167a7bf1f0bc15510/src/data/rsaKeys.ts
+// sssssea6/totoro-paradise2/src/data/rsaKeys.ts
 
+// 私钥保留（如有其他地方需要），否则只用公钥也可
 export const privateKey = [
   '-----BEGIN PRIVATE KEY-----',
   'MIICeAIBADANBgkqhkiG9w0BAQEFAASCAmIwggJeAgEAAoGBANT+P5zkV2QTCFIg',
@@ -19,7 +20,7 @@ export const privateKey = [
   '-----END PRIVATE KEY-----',
 ].join('\n');
 
-// 提取出的纯净公钥 Body (无换行，无 Header/Footer)
+// 纯净公钥主体（无头尾，无换行）
 export const publicKeyBody =
   'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDU/j+c5FdkEwhSIF9jmw+050iN0/yfjhk/669RyFiG5wu0Adpk3NR2Ikbo2lA+rTBJBx1bpGVGCvMKKQ/pljNUSmJtJaM5ieONFrZD6RhSUbjrNENH89Ks9GGWi+1dkOfdSHNujQilF5oLOIHez1HYmwmlADA29Ux4yb8e4+PtLQIDAQAB';
 
