@@ -469,20 +469,21 @@ export default defineEventHandler(async (event) => {
       scantronId: exercisesRes.scantronId,
       breq: { stuNumber, token },
     });
+
+    const distanceKmForLog = Number(routeResult.distanceKm.toFixed(2));
     if (isSupabaseConfigured()) {
       const supabase = getSupabaseAdminClient();
-      supabase
-        .from('free_run_records')
-        .insert({
+      try {
+        const { error: logError } = await supabase.from('free_run_records').insert({
           user_id: stuNumber,
-          distance_km: routeResult.distanceKm,
+          distance_km: distanceKmForLog,
           scantron_id: exercisesRes.scantronId,
           created_at: new Date().toISOString(),
-        })
-        .then(({ error }) => {
-          if (error) console.warn('[freerun] log record failed', error.message);
-        })
-        .catch(() => {});
+        });
+        if (logError) console.warn('[freerun] log record failed', logError.message);
+      } catch (e: any) {
+        console.warn('[freerun] log record failed (exception)', e?.message || e);
+      }
     }
 
     return {
