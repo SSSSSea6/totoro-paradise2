@@ -1,25 +1,26 @@
-// sssssea6/totoro-paradise2/totoro-paradise2-56d476fc4dd56da1d8091e1167a7bf1f0bc15510/src/utils/encryptRequestContent.server.ts
+﻿import crypto from "crypto";
+import { publicKeyBody } from "../data/rsaKeys";
 
-import crypto from 'crypto';
-import { publicKeyBody } from '../data/rsaKeys';
-
-/**
- * 使用 DER 格式直接加载公钥，彻底规避 PEM 换行符/空格解析失败的问题
- */
 const encryptRequestContent = (req: Record<string, any>): string => {
   const debug = process.env.ENCRYPT_DEBUG === 'true';
+  const raw = Buffer.from(publicKeyBody, 'base64');
 
-  let keyObject: crypto.KeyObject;
-  try {
-    // 核心修改：使用 Buffer + der + spki 格式，不依赖文本解析
-    keyObject = crypto.createPublicKey({
-      key: Buffer.from(publicKeyBody, 'base64'),
-      format: 'der',
-      type: 'spki',
-    });
-  } catch (error: any) {
-    console.error('[encrypt] createPublicKey (DER) failed:', error?.message);
-    throw new Error('公钥构造失败: ' + (error?.message || 'unknown'));
+  let keyObject: crypto.KeyObject | null = null;
+  let lastErr: any = null;
+
+  for (const type of ['spki', 'pkcs1'] as const) {
+    try {
+      keyObject = crypto.createPublicKey({ key: raw, format: 'der', type });
+      if (debug) console.log(`[encrypt] createPublicKey ok with type=${type}`);
+      break;
+    } catch (error: any) {
+      lastErr = error;
+      console.error(`[encrypt] createPublicKey (${type}) failed:`, error?.message);
+    }
+  }
+
+  if (!keyObject) {
+    throw new Error('公钥构造失败 ' + (lastErr?.message || 'unknown'));
   }
 
   const modulusBits =
@@ -30,8 +31,7 @@ const encryptRequestContent = (req: Record<string, any>): string => {
     throw new Error('密钥模长无效');
   }
 
-  // PKCS#1 v1.5 padding overhead is 11 bytes
-  const maxChunkSize = Math.floor(modulusBits / 8) - 11;
+  const maxChunkSize = Math.floor(modulusBits / 8) - 11; // PKCS#1 v1.5 padding
 
   if (debug) {
     console.log(`[encrypt] ready. modulusBits=${modulusBits}, chunk=${maxChunkSize} bytes.`);
