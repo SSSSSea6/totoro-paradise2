@@ -239,6 +239,41 @@ export default defineEventHandler(async (event) => {
       return { ok: false, message: `公里查询失败: ${error.message}` };
     }
 
+    // 首次使用，自动赠送 1 公里
+    if (error?.code === 'PGRST116' || data == null) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('free_run_credits')
+        .upsert({
+          user_id: stuNumber,
+          credits: 1,
+          updated_at: new Date().toISOString(),
+        })
+        .select('credits')
+        .single();
+
+      if (insertError) {
+        return { ok: false, message: `公里初始化失败: ${insertError.message}` };
+      }
+      if ((inserted?.credits ?? 0) < consumeKm) {
+        return {
+          ok: false,
+          message: `自由跑公里数不足（需 ${consumeKm} km，剩余 ${Number(inserted?.credits ?? 0).toFixed(2)} km）`,
+        };
+      }
+      const nextInitCredits = Number(((inserted?.credits ?? 0) - consumeKm).toFixed(2));
+      const { error: updateInitError } = await supabase
+        .from('free_run_credits')
+        .upsert({
+          user_id: stuNumber,
+          credits: nextInitCredits,
+          updated_at: new Date().toISOString(),
+        });
+      if (updateInitError) {
+        return { ok: false, message: `公里扣减失败: ${updateInitError.message}` };
+      }
+      return { ok: true, remaining: nextInitCredits };
+    }
+
     const currentCredits = data?.credits ?? 0;
     if (currentCredits < consumeKm) {
       return {
