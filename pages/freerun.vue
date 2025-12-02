@@ -21,8 +21,6 @@ const records = ref<Array<{ distance_km?: number; scantron_id?: string; created_
 const redeemDialog = ref(false);
 const redeemCode = ref('');
 const redeemLinksDialog = ref(false);
-const accessPassword = ref('');
-const unlocked = ref(false);
 
 const isLoggedIn = computed(() => Boolean(hydratedSession.value?.token));
 const displayStuNumber = computed(() => hydratedSession.value?.stuNumber || '-');
@@ -112,11 +110,6 @@ const handleRedeem = async () => {
 };
 
 const handleRun = async () => {
-  if (!unlocked.value && accessPassword.value !== '982108244Qq') {
-    notify('请输入正确的访问密码');
-    return;
-  }
-  if (!unlocked.value) unlocked.value = true;
   if (!ensureLogin()) return;
   isLoading.value = true;
   try {
@@ -179,21 +172,6 @@ watch(
         <div class="flex items-center justify-between">
           <div class="text-h6">自由跑</div>
         </div>
-
-        <VRow dense>
-          <VCol cols="12" md="4">
-            <VTextField
-              v-model="accessPassword"
-              type="password"
-              label="访问密码"
-              variant="outlined"
-              placeholder="请输入访问密码"
-              :disabled="unlocked"
-              hint="正确密码后方可提交自由跑"
-              persistent-hint
-            />
-          </VCol>
-        </VRow>
 
         <VRow dense>
           <VCol cols="12" md="4">

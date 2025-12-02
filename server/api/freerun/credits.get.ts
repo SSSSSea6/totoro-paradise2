@@ -1,16 +1,60 @@
-// Freedom-run credits handler stripped; forwards to external service only.
+import { getQuery } from 'h3';
+import { getSupabaseAdminClient, isSupabaseConfigured } from '../../utils/supabaseAdminClient';
+
 export default defineEventHandler(async (event) => {
-  const external = process.env.FREERUN_API_BASE;
-  if (!external) {
-    return { success: false, message: '自由跑已迁出本仓库，请配置 FREERUN_API_BASE 指向外部服务', credits: null, records: [] };
+  if (!isSupabaseConfigured()) {
+    return { success: false, message: 'Supabase 未配置', credits: null, records: [] };
   }
-  const qs = event.node.req.url?.split('?')[1] || '';
-  const res = await fetch(`${external.replace(/\/$/, '')}/api/freerun/credits${qs ? `?${qs}` : ''}`);
-  const data = await res.json().catch(() => ({
-    success: false,
-    message: '外部服务响应解析失败',
-    credits: null,
-    records: [],
-  }));
-  return data;
+
+  const query = getQuery(event);
+  const userId = String(query.userId || '');
+  if (!userId) {
+    return { success: false, message: '缺少 userId', credits: null, records: [] };
+  }
+
+  const supabase = getSupabaseAdminClient();
+
+  const { data: creditRow, error: creditError } = await supabase
+    .from('free_run_credits')
+    .select('credits')
+    .eq('user_id', userId)
+    .single();
+
+  if (creditError && creditError.code !== 'PGRST116') {
+    return { success: false, message: creditError.message, credits: null, records: [] };
+  }
+
+  // 首次进入：无记录时自动创建，初始次数为 1
+  if (creditError?.code === 'PGRST116' || creditRow == null) {
+    const { data: inserted, error: upsertError } = await supabase
+      .from('free_run_credits')
+      .upsert({
+        user_id: userId,
+        credits: 1,
+        updated_at: new Date().toISOString(),
+      })
+      .select('credits')
+      .single();
+
+    if (upsertError) {
+      return { success: false, message: upsertError.message, credits: null, records: [] };
+    }
+
+    return { success: true, credits: inserted?.credits ?? 1, records: [] };
+  }
+
+  const credits = creditRow?.credits ?? 0;
+
+  const { data: records, error: recError } = await supabase
+    .from('free_run_records')
+    .select('distance_km, scantron_id, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (recError && recError.code !== 'PGRST116') {
+    return { success: false, message: recError.message, credits, records: [] };
+  }
+
+  return { success: true, credits, records: records || [] };
 });
