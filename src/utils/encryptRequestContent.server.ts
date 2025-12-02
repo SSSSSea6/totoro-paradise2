@@ -1,35 +1,37 @@
+// sssssea6/totoro-paradise2/totoro-paradise2-56d476fc4dd56da1d8091e1167a7bf1f0bc15510/src/utils/encryptRequestContent.server.ts
+
 import crypto from 'crypto';
-import rsaKeys from '../data/rsaKeys';
+import { publicKeyBody } from '../data/rsaKeys';
 
 /**
- * 固定使用内置公钥，避免环境变量污染；同时对解析/模长/分块大小做严格校验，调试时打印关键信息。
+ * 使用 DER 格式直接加载公钥，彻底规避 PEM 换行符/空格解析失败的问题
  */
 const encryptRequestContent = (req: Record<string, any>): string => {
   const debug = process.env.ENCRYPT_DEBUG === 'true';
-  const pem = rsaKeys.publicKey.replace(/\\n/g, '\n').trim();
 
   let keyObject: crypto.KeyObject;
   try {
-    keyObject = crypto.createPublicKey(pem);
+    // 核心修改：使用 Buffer + der + spki 格式，不依赖文本解析
+    keyObject = crypto.createPublicKey({
+      key: Buffer.from(publicKeyBody, 'base64'),
+      format: 'der',
+      type: 'spki',
+    });
   } catch (error: any) {
-    console.error('[encrypt] createPublicKey failed:', error?.message);
-    console.error('[encrypt] key (first 100 chars):', pem.slice(0, 100));
-    throw new Error('公钥解析失败');
+    console.error('[encrypt] createPublicKey (DER) failed:', error?.message);
+    throw new Error('公钥构造失败: ' + (error?.message || 'unknown'));
   }
 
   const modulusBits =
     keyObject.asymmetricKeyDetails?.modulusLength ?? (keyObject as any).asymmetricKeySize ?? 0;
+
   if (typeof modulusBits !== 'number' || !Number.isInteger(modulusBits) || modulusBits <= 0) {
     console.error('[encrypt] invalid modulusLength:', modulusBits);
-    console.error('[encrypt] keyDetails:', JSON.stringify(keyObject.asymmetricKeyDetails));
     throw new Error('密钥模长无效');
   }
 
-  const maxChunkSize = Math.floor(modulusBits / 8) - 11; // PKCS#1 v1.5 padding
-  if (maxChunkSize <= 0) {
-    console.error('[encrypt] invalid chunk size:', maxChunkSize);
-    throw new Error('分块大小无效');
-  }
+  // PKCS#1 v1.5 padding overhead is 11 bytes
+  const maxChunkSize = Math.floor(modulusBits / 8) - 11;
 
   if (debug) {
     console.log(`[encrypt] ready. modulusBits=${modulusBits}, chunk=${maxChunkSize} bytes.`);
@@ -40,14 +42,15 @@ const encryptRequestContent = (req: Record<string, any>): string => {
 
   for (let offset = 0; offset < buffer.length; offset += maxChunkSize) {
     const chunk = buffer.slice(offset, offset + maxChunkSize);
-    const encryptedChunk = crypto.publicEncrypt(
-      {
-        key: keyObject,
-        padding: crypto.constants.RSA_PKCS1_PADDING,
-      },
-      chunk,
+    chunks.push(
+      crypto.publicEncrypt(
+        {
+          key: keyObject,
+          padding: crypto.constants.RSA_PKCS1_PADDING,
+        },
+        chunk,
+      ),
     );
-    chunks.push(encryptedChunk);
   }
 
   return Buffer.concat(chunks).toString('base64');
