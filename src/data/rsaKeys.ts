@@ -14,11 +14,13 @@ HjIEmyFm1LWuDHSinpON5dkT03O+zjTTcDcPnv9NTQaBHMMEsM0psQkCQQCZ9znK
 9fLouRHaWb7HqR3nldeUYoA3NuL+69Q1FOBeoIy5zoU6UDkqxK+uoA2rnZa+5If4
 d2cAmn4N+8uqjvjA
 -----END PRIVATE KEY-----`;
-const publicKey = `-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDU/j+c5FdkEwhSIF9jmw+050iN
-0/yfjhk/669RyFiG5wu0Adpk3NR2Ikbo2lA+rTBJBx1bpGVGCvMKKQ/pljNUSmJt
-JaM5ieONFrZD6RhSUbjrNENH89Ks9GGWi+1dkOfdSHNujQilF5oLOIHez1HYmwml
-ADA29Ux4yb8e4+PtLQIDAQAB
------END PUBLIC KEY-----`;
+export const publicKey = [
+  '-----BEGIN PUBLIC KEY-----',
+  'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDU/j+c5FdkEwhSIF9jmw+050iN',
+  '0/yfjhk/669RyFiG5wu0Adpk3NR2Ikbo2lA+rTBJBx1bpGVGCvMKKQ/pljNUSmJt',
+  'JaM5ieONFrZD6RhSUbjrNENH89Ks9GGWi+1dkOfdSHNujQilF5oLOIHez1HYmwml',
+  'ADA29Ux4yb8e4+PtLQIDAQAB',
+  '-----END PUBLIC KEY-----',
+].join('\n');
 
 export default { privateKey, publicKey };
