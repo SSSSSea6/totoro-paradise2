@@ -173,53 +173,38 @@ watch(
 
     <VCard v-if="isLoggedIn" class="p-4 space-y-4">
       <div class="flex flex-col gap-3">
-        <div class="flex items-center justify-between">
-          <div class="text-h6">自由跑</div>
+        <div class="text-h5 font-bold text-left">自由跑</div>
+
+        <div class="flex flex-wrap gap-3">
+          <VCard elevation="0" variant="outlined" class="px-4 py-3 w-full sm:w-80">
+            <div class="text-sm text-gray-500 mb-1">姓名</div>
+            <div class="text-base text-gray-800">{{ displayStuName }}</div>
+            <div class="mt-2 text-sm text-gray-500 mb-1">学号</div>
+            <div class="text-base text-gray-800">{{ displayStuNumber }}</div>
+          </VCard>
         </div>
 
-        <VRow dense>
-          <VCol cols="12" md="4">
-            <VCard elevation="0" variant="outlined" class="px-3 py-2">
-              <div class="text-gray-500 text-sm">姓名</div>
-              <div class="text-lg font-semibold">{{ displayStuName }}</div>
-            </VCard>
-          </VCol>
-          <VCol cols="12" md="4">
-            <VCard elevation="0" variant="outlined" class="px-3 py-2">
-              <div class="text-gray-500 text-sm">学号</div>
-              <div class="text-lg font-semibold">{{ displayStuNumber }}</div>
-            </VCard>
-          </VCol>
-          <VCol cols="12" md="4">
-            <VCard elevation="0" variant="outlined" class="px-3 py-2">
-              <div class="text-gray-500 text-sm">学校/校区</div>
-              <div class="text-lg font-semibold">{{ displaySchool }}</div>
-            </VCard>
-          </VCol>
-        </VRow>
-
-        <VRow dense>
-          <VCol cols="12" md="4">
-            <VCard elevation="0" class="px-3 py-2 bg-gray-50">
-              <div class="flex items-center gap-2">
-                <div>
-                  <div class="text-gray-500 text-sm">剩余公里数</div>
-                  <div class="text-2xl font-bold text-green-600">
-                    <span v-if="!loadingCredits">{{ credits.toFixed(2) }}</span>
-                    <span v-else>加载中...</span>
-                  </div>
-                </div>
-                <VBtn
-                  icon="mdi-plus"
-                  size="small"
-                  variant="tonal"
-                  color="primary"
-                  @click="redeemDialog = true"
-                />
+        <VCard
+          elevation="1"
+          class="px-4 py-3"
+          style="background: linear-gradient(135deg, #fef4e9, #ffe8d1); border: 1px solid #ffd0a6;"
+        >
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div class="text-sm text-gray-600">剩余公里数</div>
+              <div class="text-3xl font-bold text-orange-600 leading-tight">
+                <span v-if="!loadingCredits">{{ credits.toFixed(2) }}</span>
+                <span v-else>加载中...</span>
               </div>
-            </VCard>
-          </VCol>
-        </VRow>
+            </div>
+            <div class="flex items-center gap-2">
+              <VBtn color="orange" variant="flat" class="rounded-lg px-4" @click="redeemDialog = true">
+                兑换/加里程
+              </VBtn>
+              <VBtn color="primary" variant="tonal" icon="mdi-refresh" @click="fetchCredits" />
+            </div>
+          </div>
+        </VCard>
       </div>
 
       <VRow dense>
@@ -316,6 +301,15 @@ watch(
               target="_blank"
             >
               30 公里
+            </VBtn>
+            <VBtn
+              color="primary"
+              variant="tonal"
+              size="small"
+              href="https://mbd.pub/o/bread/YZWZmJZxaQ=="
+              target="_blank"
+            >
+              3.2 公里
             </VBtn>
           </div>
         </VCardText>

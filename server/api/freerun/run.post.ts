@@ -410,7 +410,10 @@ export default defineEventHandler(async (event) => {
     };
   }
 
-  const start = new Date();
+  // 将时间统一转换到东八区（服务器可能跑在 UTC）
+  const now = new Date();
+  const shanghaiOffsetMs = (8 * 60 + now.getTimezoneOffset()) * 60 * 1000;
+  const start = new Date(now.getTime() + shanghaiOffsetMs);
   const extraKm = parseFloat((0.02 + Math.random() * 0.08).toFixed(2));
   let targetKm = parseFloat((baseKm + extraKm).toFixed(2));
   // 保持不超出总上限 3.2km
