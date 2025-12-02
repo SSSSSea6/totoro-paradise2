@@ -1,34 +1,44 @@
-import crypto from 'crypto';
+// 使用纯 JS 的 RSA 库，绕过 Koyeb/nuxt(unenv) 对 node:crypto 的阉割
+import NodeRSA from './nodeRSA';
 import { publicKeyBody } from '../data/rsaKeys';
 
 /**
- * 终极兼容版：直接拼 PEM + 固定分块大小，兼容所有 Node 版本/精简容器。
+ * 纯 JS 加密：构造 PEM + NodeRSA + PKCS#1 v1.5 分块
  */
 const encryptRequestContent = (req: Record<string, any>): string => {
-  // 按 64 字符换行，拼成标准 PEM
-  const chunkedBody = publicKeyBody.match(/.{1,64}/g)?.join('\n') || publicKeyBody;
-  const pem = `-----BEGIN PUBLIC KEY-----\n${chunkedBody}\n-----END PUBLIC KEY-----\n`;
+  const debug = process.env.ENCRYPT_DEBUG === 'true';
 
-  // 1024-bit RSA => 128 bytes; PKCS#1 padding overhead 11 bytes => 可用 117 字节
-  const maxChunkSize = 117;
+  // 标准 PEM 头尾
+  const pem = `-----BEGIN PUBLIC KEY-----\n${publicKeyBody}\n-----END PUBLIC KEY-----`;
+
+  let key: any;
+  try {
+    key = new (NodeRSA as any)();
+    key.importKey(pem, 'pkcs8-public-pem');
+    key.setOptions({ encryptionScheme: 'pkcs1' }); // PKCS#1 v1.5
+  } catch (e: any) {
+    console.error('[encrypt] NodeRSA init failed:', e);
+    throw new Error(`RSA初始化失败: ${e?.message || e}`);
+  }
 
   const buffer = Buffer.from(JSON.stringify(req), 'utf8');
   const chunks: Buffer[] = [];
 
+  // 1024-bit RSA，PKCS#1 padding -> 最大 117 字节
+  const maxChunkSize = 117;
+
+  if (debug) {
+    console.log(`[encrypt] NodeRSA ready. Chunk size: ${maxChunkSize}`);
+  }
+
   for (let offset = 0; offset < buffer.length; offset += maxChunkSize) {
     const chunk = buffer.slice(offset, offset + maxChunkSize);
     try {
-      const encryptedChunk = crypto.publicEncrypt(
-        {
-          key: pem,
-          padding: crypto.constants.RSA_PKCS1_PADDING,
-        },
-        chunk,
-      );
+      const encryptedChunk = key.encrypt(chunk, 'buffer');
       chunks.push(encryptedChunk);
     } catch (err: any) {
-      console.error('[encrypt] publicEncrypt failed:', err?.message);
-      throw new Error(`加密失败(Core): ${err?.message || 'unknown'}`);
+      console.error('[encrypt] NodeRSA encrypt failed:', err?.message);
+      throw new Error(`加密计算失败: ${err?.message || err}`);
     }
   }
 
