@@ -270,11 +270,29 @@ export default defineEventHandler(async (event) => {
   let sunrunPaper: any = null;
   const paperReq = { token, stuNumber, campusId, schoolId };
 
-  freePaper = await TotoroApiWrapper.getFreerunPaper(paperReq).catch((e) => {
+  try {
+    freePaper = await TotoroApiWrapper.getFreerunPaper(paperReq);
+  } catch (e: any) {
     freeError = e;
-    console.error('[freerun] getFreerunPaper failed', e);
-    return null;
-  });
+    console.error('[freerun] getFreerunPaper failed:', e);
+    let errorDetail = e?.message || String(e);
+    if (e?.response) {
+      try {
+        const errBody = await e.response.text();
+        errorDetail += ` | Remote Body: ${errBody}`;
+      } catch {}
+      errorDetail += ` | Status: ${e.response.status}`;
+    }
+    return {
+      success: false,
+      message: '获取任务失败 (调试模式)',
+      error: `Error: ${errorDetail}`,
+      debugInfo: {
+        step: 'getFreerunPaper',
+        isServer: true,
+      },
+    };
+  }
   taskId = extractTaskId(freePaper);
   dlog('freePaper taskId', taskId, 'freePaper', safe(freePaper), 'error', freeError ? String(freeError) : undefined);
 
