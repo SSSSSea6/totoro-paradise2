@@ -275,22 +275,22 @@ export default defineEventHandler(async (event) => {
   } catch (e: any) {
     freeError = e;
     console.error('[freerun] getFreerunPaper failed:', e);
-    let errorDetail = e?.message || String(e);
+
+    let errorDetail = e?.message || 'Unknown Error';
+    let remoteBody = '';
     if (e?.response) {
       try {
-        const errBody = await e.response.text();
-        errorDetail += ` | Remote Body: ${errBody}`;
+        remoteBody = await e.response.text();
       } catch {}
-      errorDetail += ` | Status: ${e.response.status}`;
+      errorDetail = `Status: ${e.response.status} | Body: ${remoteBody.slice(0, 100)}`;
     }
+
     return {
       success: false,
-      message: '获取任务失败 (调试模式)',
-      error: `Error: ${errorDetail}`,
-      debugInfo: {
-        step: 'getFreerunPaper',
-        isServer: true,
-      },
+      message: '调试模式：请求龙猫服务器失败',
+      error: errorDetail,
+      debugStep: 'getFreerunPaper',
+      tip: '如果是 404/500/Timeout，可能是 IP 被墙；如果是 file not found，是密钥丢失。',
     };
   }
   taskId = extractTaskId(freePaper);
