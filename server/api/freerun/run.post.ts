@@ -226,7 +226,7 @@ export default defineEventHandler(async (event) => {
     return { success: false, message: '长度不合法，仅支持 0.5~3.2km' };
   }
 
-  const maybeConsumeFreeRunCredit = async () => {
+  const maybeConsumeFreeRunCredit = async (consumeKm: number) => {
     if (!isSupabaseConfigured()) return { ok: true, remaining: null as number | null };
     const supabase = getSupabaseAdminClient();
     const { data, error } = await supabase
@@ -236,30 +236,34 @@ export default defineEventHandler(async (event) => {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      return { ok: false, message: `次数查询失败: ${error.message}` };
+      return { ok: false, message: `公里查询失败: ${error.message}` };
     }
 
     const currentCredits = data?.credits ?? 0;
-    if (currentCredits <= 0) {
-      return { ok: false, message: '自由跑次数不足' };
+    if (currentCredits < consumeKm) {
+      return {
+        ok: false,
+        message: `自由跑公里数不足（需 ${consumeKm} km，剩余 ${Number(currentCredits).toFixed(2)} km）`,
+      };
     }
 
+    const nextCredits = Number((currentCredits - consumeKm).toFixed(2));
     const { error: updateError } = await supabase
       .from('free_run_credits')
       .upsert({
         user_id: stuNumber,
-        credits: currentCredits - 1,
+        credits: nextCredits,
         updated_at: new Date().toISOString(),
       });
 
     if (updateError) {
-      return { ok: false, message: `次数扣减失败: ${updateError.message}` };
+      return { ok: false, message: `公里扣减失败: ${updateError.message}` };
     }
 
-    return { ok: true, remaining: currentCredits - 1 };
+    return { ok: true, remaining: nextCredits };
   };
 
-  const quota = await maybeConsumeFreeRunCredit();
+  const quota = await maybeConsumeFreeRunCredit(baseKm);
   if (!quota.ok) {
     return { success: false, message: quota.message };
   }

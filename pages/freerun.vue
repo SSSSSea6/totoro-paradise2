@@ -203,9 +203,9 @@ watch(
             <VCard elevation="0" class="px-3 py-2 bg-gray-50">
               <div class="flex items-center gap-2">
                 <div>
-                  <div class="text-gray-500 text-sm">剩余次数</div>
+                  <div class="text-gray-500 text-sm">剩余公里数</div>
                   <div class="text-2xl font-bold text-green-600">
-                    <span v-if="!loadingCredits">{{ credits }}</span>
+                    <span v-if="!loadingCredits">{{ credits.toFixed(2) }}</span>
                     <span v-else>加载中...</span>
                   </div>
                 </div>
@@ -253,7 +253,7 @@ watch(
 
     <VDialog v-model="redeemDialog" max-width="480">
       <VCard>
-        <VCardTitle>兑换次数</VCardTitle>
+        <VCardTitle>兑换公里</VCardTitle>
         <VCardText>
           <VTextField v-model="redeemCode" label="请输入兑换码" variant="outlined" />
           <div class="text-sm text-primary mt-2 cursor-pointer" @click="redeemLinksDialog = true">
@@ -269,23 +269,53 @@ watch(
 
     <VDialog v-model="redeemLinksDialog" max-width="360">
       <VCard>
-        <VCardTitle>选择次数</VCardTitle>
+        <VCardTitle>选择公里数</VCardTitle>
         <VCardText class="space-y-2">
           <div class="flex flex-wrap gap-2">
-            <VBtn color="primary" variant="tonal" size="small" href="https://mbd.pub/o/bread/YZWZl59rZA==" target="_blank">
-              1 次
+            <VBtn
+              color="primary"
+              variant="tonal"
+              size="small"
+              href="https://mbd.pub/o/bread/YZWZl59rZA=="
+              target="_blank"
+            >
+              1 公里
             </VBtn>
-            <VBtn color="primary" variant="tonal" size="small" href="https://mbd.pub/o/bread/YZWZl5tyaA==" target="_blank">
-              2 次
+            <VBtn
+              color="primary"
+              variant="tonal"
+              size="small"
+              href="https://mbd.pub/o/bread/YZWZl5tyaA=="
+              target="_blank"
+            >
+              2 公里
             </VBtn>
-            <VBtn color="primary" variant="tonal" size="small" href="https://mbd.pub/o/bread/YZWZlp9qbA==" target="_blank">
-              5 次
+            <VBtn
+              color="primary"
+              variant="tonal"
+              size="small"
+              href="https://mbd.pub/o/bread/YZWZlp9qbA=="
+              target="_blank"
+            >
+              5 公里
             </VBtn>
-            <VBtn color="primary" variant="tonal" size="small" href="https://mbd.pub/o/bread/YZWZlpxpaw==" target="_blank">
-              10 次
+            <VBtn
+              color="primary"
+              variant="tonal"
+              size="small"
+              href="https://mbd.pub/o/bread/YZWZlpxpaw=="
+              target="_blank"
+            >
+              10 公里
             </VBtn>
-            <VBtn color="primary" variant="tonal" size="small" href="https://mbd.pub/o/bread/YZWYmpdvZg==" target="_blank">
-              30 次
+            <VBtn
+              color="primary"
+              variant="tonal"
+              size="small"
+              href="https://mbd.pub/o/bread/YZWYmpdvZg=="
+              target="_blank"
+            >
+              30 公里
             </VBtn>
           </div>
         </VCardText>

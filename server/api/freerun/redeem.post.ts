@@ -59,5 +59,5 @@ export default defineEventHandler(async (event) => {
     return { success: false, message: '兑换失败，请稍后重试' };
   }
 
-  return { success: true, message: `成功兑换 ${codeData.amount} 次`, credits: newCredits };
+  return { success: true, message: `成功兑换 ${codeData.amount} 公里`, credits: newCredits };
 });

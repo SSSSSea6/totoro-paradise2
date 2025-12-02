@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     return { success: false, message: creditError.message, credits: null, records: [] };
   }
 
-  // 首次进入：无记录时自动创建，初始次数为 1
+  // 首次进入：无记录时自动创建，初始公里数为 1
   if (creditError?.code === 'PGRST116' || creditRow == null) {
     const { data: inserted, error: upsertError } = await supabase
       .from('free_run_credits')
