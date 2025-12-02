@@ -45,7 +45,9 @@ const TotoroApiWrapper = {
       methods: ['post'],
     },
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
+      // Upstream now rejects text/plain and only accepts application/json
+      // even though the body is a raw encrypted string.
+      'Content-Type': 'application/json',
       // "Content-Length": "0",
       Host: 'app.xtotoro.com',
       Connection: 'Keep-Alive',
