@@ -2,49 +2,34 @@ import crypto from 'crypto';
 import { publicKeyBody } from '../data/rsaKeys';
 
 /**
- * 使用 DER 直接加载公钥，彻底绕过 PEM 换行/头尾解析问题。
+ * 终极兼容版：直接拼 PEM + 固定分块大小，兼容所有 Node 版本/精简容器。
  */
 const encryptRequestContent = (req: Record<string, any>): string => {
-  const debug = process.env.ENCRYPT_DEBUG === 'true';
-  let keyObject: crypto.KeyObject;
+  // 按 64 字符换行，拼成标准 PEM
+  const chunkedBody = publicKeyBody.match(/.{1,64}/g)?.join('\n') || publicKeyBody;
+  const pem = `-----BEGIN PUBLIC KEY-----\n${chunkedBody}\n-----END PUBLIC KEY-----\n`;
 
-  try {
-    keyObject = crypto.createPublicKey({
-      key: Buffer.from(publicKeyBody, 'base64'),
-      format: 'der',
-      type: 'spki',
-    });
-  } catch (error: any) {
-    console.error('[encrypt] createPublicKey (DER spki) failed:', error?.message);
-    throw new Error('公钥构造失败: ' + (error?.message || 'unknown'));
-  }
-
-  const modulusBits =
-    keyObject.asymmetricKeyDetails?.modulusLength ?? (keyObject as any).asymmetricKeySize ?? 0;
-  if (typeof modulusBits !== 'number' || !Number.isInteger(modulusBits) || modulusBits <= 0) {
-    console.error('[encrypt] invalid modulusLength:', modulusBits);
-    throw new Error('密钥模长无效');
-  }
-
-  const maxChunkSize = Math.floor(modulusBits / 8) - 11; // PKCS#1 v1.5 padding
-  if (debug) {
-    console.log(`[encrypt] ready. modulusBits=${modulusBits}, chunk=${maxChunkSize} bytes.`);
-  }
+  // 1024-bit RSA => 128 bytes; PKCS#1 padding overhead 11 bytes => 可用 117 字节
+  const maxChunkSize = 117;
 
   const buffer = Buffer.from(JSON.stringify(req), 'utf8');
   const chunks: Buffer[] = [];
 
   for (let offset = 0; offset < buffer.length; offset += maxChunkSize) {
     const chunk = buffer.slice(offset, offset + maxChunkSize);
-    chunks.push(
-      crypto.publicEncrypt(
+    try {
+      const encryptedChunk = crypto.publicEncrypt(
         {
-          key: keyObject,
+          key: pem,
           padding: crypto.constants.RSA_PKCS1_PADDING,
         },
         chunk,
-      ),
-    );
+      );
+      chunks.push(encryptedChunk);
+    } catch (err: any) {
+      console.error('[encrypt] publicEncrypt failed:', err?.message);
+      throw new Error(`加密失败(Core): ${err?.message || 'unknown'}`);
+    }
   }
 
   return Buffer.concat(chunks).toString('base64');
