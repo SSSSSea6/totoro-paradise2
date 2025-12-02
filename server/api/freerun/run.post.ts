@@ -2,6 +2,22 @@
 import freeRunRoutes from '~~/src/data/freeRunRoutes';
 import { getSupabaseAdminClient, isSupabaseConfigured } from '../../utils/supabaseAdminClient';
 
+const freerunDebug = process.env.FREERUN_DEBUG === 'true';
+const safe = (obj: any) => {
+  if (!freerunDebug) return obj;
+  try {
+    const cloned = JSON.parse(JSON.stringify(obj));
+    if (cloned?.token) cloned.token = '[redacted]';
+    if (cloned?.body?.token) cloned.body.token = '[redacted]';
+    return cloned;
+  } catch {
+    return obj;
+  }
+};
+const dlog = (...args: any[]) => {
+  if (freerunDebug) console.log('[freerun:debug]', ...args);
+};
+
 type GeoPoint = { longitude: number; latitude: number };
 
 const formatPointToAMap = (point: GeoPoint) => [Number(point.longitude), Number(point.latitude)];
@@ -199,6 +215,7 @@ export default defineEventHandler(async (event) => {
     routeId,
     useSunRunMap = true,
   } = body || {};
+  dlog('req.body', safe(body));
 
   if (!token || !stuNumber || !campusId || !schoolId) {
     return { success: false, message: '缺少必要参数' };
@@ -259,6 +276,7 @@ export default defineEventHandler(async (event) => {
     return null;
   });
   taskId = extractTaskId(freePaper);
+  dlog('freePaper taskId', taskId, 'freePaper', safe(freePaper), 'error', freeError ? String(freeError) : undefined);
 
   const getSunPaper = async () => {
     try {
@@ -292,10 +310,12 @@ export default defineEventHandler(async (event) => {
     sunrunPaper = await getSunPaper();
     if (!sunrunPaper) sunrunPaper = await getSunPaperNew();
     taskId = extractTaskId(sunrunPaper);
+    dlog('sunrunPaper taskId', taskId, 'sunrunPaper.pointList', (sunrunPaper as any)?.pointList?.length);
   }
 
   const selectedRoute = freeRunRoutes.find((r) => r.id === routeId) || freeRunRoutes[0];
   let mapPoints: GeoPoint[] | undefined = selectedRoute?.basePoints;
+  dlog('selectedRoute', selectedRoute?.id, 'mapPoints init', mapPoints?.length);
 
   if ((!mapPoints || mapPoints.length === 0) && useSunRunMap) {
     if (!sunrunPaper) {
@@ -305,6 +325,7 @@ export default defineEventHandler(async (event) => {
       }
     }
     mapPoints = (sunrunPaper as any)?.pointList || DEFAULT_ROUTE_POINTS;
+    dlog('mapPoints from sunrun', (sunrunPaper as any)?.pointList?.length);
   }
 
   if (!mapPoints || !mapPoints.length) {
@@ -378,9 +399,11 @@ export default defineEventHandler(async (event) => {
     baseStation: '',
     taskId: taskId || 'sunrunTaskPaper-free',
   };
+  dlog('runReq ready', safe(runReq));
 
   try {
     const exercisesRes = await TotoroApiWrapper.freeRunExercises(runReq);
+    dlog('exercisesRes', safe(exercisesRes));
     if (!exercisesRes?.scantronId) {
       return { success: false, message: '提交主体失败', res: exercisesRes };
     }
