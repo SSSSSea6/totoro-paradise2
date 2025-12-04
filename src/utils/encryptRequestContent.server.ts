@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import NodeRSA from './nodeRSA';
 import { publicKeyBody } from '../data/rsaKeys';
 
 const buildPublicKeyPem = (): string => {
@@ -45,16 +46,14 @@ const getKeyMaterial = () => {
     cachedChunkSize = maxChunkSize;
     return { key, maxChunkSize };
   } catch (e: any) {
-    console.error('[encrypt] Public key init failed:', e);
-    throw new Error(`RSA初始化失败: ${e?.message || e}`);
+    throw e;
   }
 };
 
 /**
  * 使用 Node 内置 crypto 进行 RSA(PKCS#1 v1.5) 分块加密。
  */
-const encryptRequestContent = (req: Record<string, any>): string => {
-  const debug = process.env.ENCRYPT_DEBUG === 'true';
+const encryptWithNodeCrypto = (req: Record<string, any>, debug: boolean): string => {
   const { key, maxChunkSize } = getKeyMaterial();
 
   const buffer = Buffer.from(JSON.stringify(req), 'utf8');
@@ -79,6 +78,40 @@ const encryptRequestContent = (req: Record<string, any>): string => {
   }
 
   return Buffer.concat(chunks).toString('base64');
+};
+
+// 兼容 unenv 不支持 crypto.createPublicKey 的运行时，退回 NodeRSA 纯 JS 实现
+const encryptWithNodeRSA = (req: Record<string, any>, debug: boolean): string => {
+  const pem = buildPublicKeyPem();
+  const rsa = new (NodeRSA as any)();
+  rsa.importKey(pem, 'pkcs8-public-pem');
+  rsa.setOptions({ encryptionScheme: 'pkcs1' });
+  const buf = Buffer.from(JSON.stringify(req), 'utf8');
+  if (debug) {
+    console.log(`[encrypt:fallback] NodeRSA buffer length=${buf.length}`);
+  }
+  return rsa.encrypt(buf, 'base64');
+};
+
+const encryptRequestContent = (req: Record<string, any>): string => {
+  const debug = process.env.ENCRYPT_DEBUG === 'true';
+  try {
+    return encryptWithNodeCrypto(req, debug);
+  } catch (e: any) {
+    const msg = e?.message || String(e);
+    const isUnenv = msg.includes('[unenv]') || msg.includes('not implemented');
+    if (!isUnenv) {
+      console.error('[encrypt] Public key init failed:', e);
+      throw new Error(`RSA初始化失败: ${msg}`);
+    }
+    // fallback to pure JS RSA when node:crypto is unavailable
+    try {
+      return encryptWithNodeRSA(req, debug);
+    } catch (fallbackErr: any) {
+      console.error('[encrypt] NodeRSA fallback failed:', fallbackErr);
+      throw new Error(`RSA初始化失败: ${fallbackErr?.message || fallbackErr}`);
+    }
+  }
 };
 
 export default encryptRequestContent;
