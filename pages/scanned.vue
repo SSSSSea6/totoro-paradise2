@@ -251,9 +251,9 @@ onUnmounted(() => {
           block
           color="primary"
           variant="tonal"
-          class="justify-start"
-          :class="routeItem.pointId === selectValue ? 'opacity-100' : 'opacity-80'"
-          :elevation="routeItem.pointId === selectValue ? 4 : 0"
+          class="justify-start transition-all"
+          :class="routeItem.pointId === selectValue ? 'bg-blue-200 text-blue-900' : 'opacity-80'"
+          :elevation="routeItem.pointId === selectValue ? 8 : 0"
           @click="selectValue = routeItem.pointId"
         >
           {{ routeItem.pointName }}
