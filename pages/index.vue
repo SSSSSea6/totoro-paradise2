@@ -13,6 +13,10 @@ const snackbar = ref(false);
 const welcomeSnackbar = ref(true);
 const isLoading = ref(false);
 const session = useSession();
+const mornSignNotice = '早操签到功能仍不完善，所有已购买的已退款';
+const MORNSIGN_PASSWORD = '982108244Qq';
+const MORNSIGN_MAX_ATTEMPTS = 4;
+const mornSignFailedAttempts = ref(0);
 
 const hydratedSession = computed(() => normalizeSession(session.value || {}));
 const isLoggedIn = computed(
@@ -186,11 +190,37 @@ const goFreeRun = () => {
 };
 
 const goMornSign = () => {
+  message.value = mornSignNotice;
+  snackbar.value = true;
+  if (typeof window !== 'undefined') {
+    window.alert(mornSignNotice);
+  }
+
   if (!isLoggedIn.value) {
+    message.value = `${mornSignNotice}。请先扫码登录`;
     snackbar.value = true;
-    message.value = '请先扫码登录';
     return;
   }
+
+  if (mornSignFailedAttempts.value >= MORNSIGN_MAX_ATTEMPTS) {
+    message.value = '密码错误次数过多，请稍后再试';
+    snackbar.value = true;
+    return;
+  }
+
+  const passwordInput = prompt('请输入早操签到访问密码');
+  if (passwordInput === null) return;
+
+  if (passwordInput !== MORNSIGN_PASSWORD) {
+    mornSignFailedAttempts.value += 1;
+    const remaining = MORNSIGN_MAX_ATTEMPTS - mornSignFailedAttempts.value;
+    message.value =
+      remaining > 0 ? `密码错误，还可再试${remaining}次` : '密码错误次数过多，请稍后再试';
+    snackbar.value = true;
+    return;
+  }
+
+  mornSignFailedAttempts.value = 0;
   router.push('/mornsign');
 };
 </script>
