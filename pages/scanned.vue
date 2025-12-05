@@ -2,10 +2,12 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase, supabaseReady } from '~/src/services/supabaseClient';
 import TotoroApiWrapper from '~/src/wrappers/TotoroApiWrapper';
+import normalizeSession from '~/src/utils/normalizeSession';
 
 const sunrunPaper = useSunRunPaper();
 const session = useSession();
 const route = useRoute();
+const hydratedSession = computed(() => normalizeSession(session.value || {}));
 
 const selectValue = ref('');
 const customEndTime = ref('');
@@ -21,6 +23,28 @@ const isQueueLoading = ref(false);
 const supabaseEnabled = computed(() => supabaseReady && Boolean(supabase));
 const target = computed(() =>
   sunrunPaper.value?.runPointList?.find((r: any) => r.pointId === selectValue.value),
+);
+const routeList = computed(() => sunrunPaper.value?.runPointList || []);
+
+const displayCampus = computed(
+  () =>
+    hydratedSession.value?.campusName ||
+    (session.value as any)?.campusName ||
+    (session.value as any)?.schoolName ||
+    '-',
+);
+const displayCollege = computed(
+  () =>
+    hydratedSession.value?.collegeName ||
+    (session.value as any)?.collegeName ||
+    (session.value as any)?.naturalName ||
+    '-',
+);
+const displayStuNumber = computed(
+  () => hydratedSession.value?.stuNumber || (session.value as any)?.stuNumber || '-',
+);
+const displayStuName = computed(
+  () => hydratedSession.value?.stuName || (session.value as any)?.stuName || '-',
 );
 
 const cleanupRealtime = () => {
@@ -200,45 +224,41 @@ onUnmounted(() => {
         <tbody>
           <tr>
             <td>学校</td>
-            <td>{{ session.value?.campusName || '-' }}</td>
+            <td>{{ displayCampus }}</td>
           </tr>
           <tr>
             <td>学院</td>
-            <td>{{ session.value?.collegeName || '-' }}</td>
+            <td>{{ displayCollege }}</td>
           </tr>
           <tr>
             <td>学号</td>
-            <td>{{ session.value?.stuNumber || '-' }}</td>
+            <td>{{ displayStuNumber }}</td>
           </tr>
           <tr>
             <td>姓名</td>
-            <td>{{ session.value?.stuName || '-' }}</td>
+            <td>{{ displayStuName }}</td>
           </tr>
         </tbody>
       </VTable>
     </div>
 
-    <div class="flex flex-wrap items-end gap-3">
-      <VSelect
-        v-model="selectValue"
-        :items="sunrunPaper?.runPointList || []"
-        item-title="pointName"
-        item-value="pointId"
-        label="路线"
-        variant="outlined"
-        class="min-w-64"
-      />
-      <VBtn variant="outlined" color="primary" append-icon="i-mdi-gesture" @click="randomSelect">
-        随机路线
-      </VBtn>
-      <VBtn
-        v-if="supabaseEnabled"
-        variant="text"
-        :loading="isQueueLoading"
-        @click="refreshQueueEstimate"
-      >
-        刷新队列
-      </VBtn>
+    <div class="space-y-2">
+      <div class="text-body-2 text-gray-600">路线</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <VBtn
+          v-for="routeItem in routeList"
+          :key="routeItem.pointId"
+          block
+          color="primary"
+          variant="tonal"
+          class="justify-start"
+          :class="routeItem.pointId === selectValue ? 'opacity-100' : 'opacity-80'"
+          :elevation="routeItem.pointId === selectValue ? 4 : 0"
+          @click="selectValue = routeItem.pointId"
+        >
+          {{ routeItem.pointName }}
+        </VBtn>
+      </div>
     </div>
 
     <VTextField
@@ -262,9 +282,6 @@ onUnmounted(() => {
     >
       提交到队列
     </VBtn>
-    <div v-if="supabaseEnabled && queueCount !== null" class="text-caption text-gray-600">
-      队列待处理：{{ queueCount }}，预估等待 {{ formatWait(estimatedWaitMs) }}
-    </div>
 
     <VAlert v-if="statusMessage" type="info" variant="tonal" class="mt-2">
       <div>{{ statusMessage }}</div>
