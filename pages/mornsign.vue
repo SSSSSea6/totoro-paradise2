@@ -57,9 +57,12 @@ function getDefaultTime() {
   return now.toISOString().slice(11, 16); // HH:mm
 }
 
+const hashStringToInt = (input: string) =>
+  Array.from(input || '').reduce((acc, ch) => (acc * 131 + ch.charCodeAt(0)) >>> 0, 0);
+
 const randomInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
 
-const getRandomTimeInWindow = (datePart: string) => {
+const getRandomTimeInWindow = (datePart: string, biasSeed?: string) => {
   const base = new Date(`${datePart}T00:00:00`);
   const start = 6 * 3600 + 40 * 60; // 06:40 -> 24000s
   const peakStart = 7 * 3600 + 30 * 60; // 07:30 -> 27000s
@@ -77,13 +80,23 @@ const getRandomTimeInWindow = (datePart: string) => {
   };
 
   const secondsOfDay = Math.random() < 0.65 ? pickPeak() : pickNonPeak();
-  const withSeconds = secondsOfDay * 1000 + randomInt(0, 59) * 1000;
-  return new Date(base.getTime() + withSeconds);
+  // 追加基于学号的偏移，降低多人同一秒的概率
+  const userBiasSeconds = biasSeed ? hashStringToInt(biasSeed) % 20 : 0; // 0-19s
+  const randomExtra = randomInt(0, 9); // 再加一点随机
+  const candidateSeconds = Math.min(secondsOfDay + userBiasSeconds + randomExtra, end);
+  const withMs = candidateSeconds * 1000 + randomInt(0, 999);
+  return new Date(base.getTime() + withMs);
 };
 
 const setRandomReservationTime = () => {
   const datePart = reservationDate.value || getDefaultDate();
-  const randomDate = getRandomTimeInWindow(datePart);
+  const biasKey =
+    hydratedSession.value?.stuNumber ||
+    hydratedSession.value?.token ||
+    (session.value as any)?.stuNumber ||
+    (session.value as any)?.token ||
+    '';
+  const randomDate = getRandomTimeInWindow(datePart, biasKey);
   reservationTime.value = randomDate.toTimeString().slice(0, 8); // HH:mm:ss
   return randomDate;
 };
@@ -281,7 +294,7 @@ const handleReserve = async () => {
   const jitteredPoint = target; // 不再抖动位置
   loadingReserve.value = true;
   try {
-    setRandomReservationTime();
+    setRandomReservationTime(); // 系统自动重新随机，避免固定时间冲突
     const scheduledTime = computeScheduledTime();
     const res = await $fetch<ReserveResponse>('/api/mornsign/reserve', {
       method: 'POST',
@@ -452,7 +465,7 @@ watch(
         <div>
           <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            时间将随机分配在 06:40-08:20，7:30-7:50 概率更高，可点击按钮重新随机。
+            时间由系统自动随机分配在 06:40-08:20，7:30-7:50 概率更高。
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
@@ -483,9 +496,8 @@ watch(
           <div class="text-body-2 text-gray-700 mb-2">预约时间（随机）</div>
           <div class="flex items-center gap-2">
             <VChip color="primary" variant="tonal">{{ reservationTimeDisplay }}</VChip>
-            <VBtn size="small" variant="text" @click="setRandomReservationTime">重新随机</VBtn>
           </div>
-          <div class="text-caption text-gray-500 mt-1">包含秒，峰值集中 07:30-07:50</div>
+          <div class="text-caption text-gray-500 mt-1">包含秒，系统自动分配。</div>
         </VCol>
       </VRow>
       <VBtn
