@@ -27,7 +27,7 @@ const signPoints = ref<MornSignPoint[]>([]);
 const records = ref<RecordItem[]>([]);
 const selectedPointId = ref('');
 const reservationDate = ref<string>(getDefaultDate());
-const reservationTime = ref<string>(getDefaultTime());
+const reservationTime = ref<string>('');
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const redeemDialog = ref(false);
@@ -36,6 +36,8 @@ const redeemLinksDialog = ref(false);
 const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(null);
 const lastScheduledTime = ref('');
 const refreshTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const featureWarningDialog = ref(true);
+const reservationNoteDialog = ref(false);
 
 const isLoggedIn = computed(() => Boolean(hydratedSession.value?.token));
 
@@ -55,10 +57,42 @@ function getDefaultTime() {
   return now.toISOString().slice(11, 16); // HH:mm
 }
 
-const computeScheduledTime = () => {
+const randomInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
+
+const getRandomTimeInWindow = (datePart: string) => {
+  const base = new Date(`${datePart}T00:00:00`);
+  const start = 6 * 3600 + 40 * 60; // 06:40 -> 24000s
+  const peakStart = 7 * 3600 + 30 * 60; // 07:30 -> 27000s
+  const peakEnd = 7 * 3600 + 50 * 60; // 07:50 -> 28200s
+  const end = 8 * 3600 + 20 * 60; // 08:20 -> 30000s
+
+  const pickPeak = () => randomInt(peakStart, peakEnd);
+  const pickNonPeak = () => {
+    const leftLen = peakStart - start;
+    const rightLen = end - peakEnd;
+    const total = leftLen + rightLen;
+    const r = Math.random() * total;
+    if (r < leftLen) return start + Math.floor(r);
+    return peakEnd + Math.floor(r - leftLen);
+  };
+
+  const secondsOfDay = Math.random() < 0.65 ? pickPeak() : pickNonPeak();
+  const withSeconds = secondsOfDay * 1000 + randomInt(0, 59) * 1000;
+  return new Date(base.getTime() + withSeconds);
+};
+
+const setRandomReservationTime = () => {
   const datePart = reservationDate.value || getDefaultDate();
-  const timePart = reservationTime.value || getDefaultTime();
-  const candidate = new Date(`${datePart}T${timePart}:00`);
+  const randomDate = getRandomTimeInWindow(datePart);
+  reservationTime.value = randomDate.toTimeString().slice(0, 8); // HH:mm:ss
+  return randomDate;
+};
+
+const computeScheduledTime = () => {
+  if (!reservationTime.value) setRandomReservationTime();
+  const datePart = reservationDate.value || getDefaultDate();
+  const timePart = reservationTime.value || '06:40:00';
+  const candidate = new Date(`${datePart}T${timePart}`);
   return candidate.toISOString();
 };
 
@@ -247,6 +281,7 @@ const handleReserve = async () => {
   const jitteredPoint = target; // 不再抖动位置
   loadingReserve.value = true;
   try {
+    setRandomReservationTime();
     const scheduledTime = computeScheduledTime();
     const res = await $fetch<ReserveResponse>('/api/mornsign/reserve', {
       method: 'POST',
@@ -268,6 +303,7 @@ const handleReserve = async () => {
       credits.value = Math.max(0, credits.value - 1);
       lastScheduledTime.value = res.scheduledTime || scheduledTime;
       await loadRecords();
+      reservationNoteDialog.value = true;
     }
   } catch (error) {
     console.error('[mornsign] reserve failed', error);
@@ -296,7 +332,19 @@ const loadRecords = async () => {
 const formatDateTime = (iso: string | undefined) =>
   iso ? new Date(iso).toLocaleString() : '';
 
-const randomRefreshDelayMs = () => 10 * 60 * 500 + Math.random() * 20 * 60 * 1000;
+const reservationTimeDisplay = computed(
+  () => `${reservationDate.value || getDefaultDate()} ${reservationTime.value || '未生成'}`,
+);
+
+watch(
+  () => reservationDate.value,
+  () => {
+    setRandomReservationTime();
+  },
+  { immediate: true },
+);
+
+const randomRefreshDelayMs = () => 10 * 60 * 1000 + Math.random() * 20 * 60 * 1000;
 
 const clearRefreshTimer = () => {
   if (refreshTimer.value) {
@@ -393,6 +441,9 @@ watch(
         <VBtn size="small" variant="text" :loading="loadingCredits" @click="fetchCredits">
           刷新
         </VBtn>
+        <span class="text-red-600 font-bold text-sm">
+          该功能仍处于测试中，建议使用一次试用次数验证一下是否可行，先不要下单，若使用后在使用的那一天没有签到成功，请联系我QQ2773849038
+        </span>
       </div>
     </VCard>
 
@@ -401,7 +452,7 @@ watch(
         <div>
           <div class="text-h6">预约早操签到</div>
           <div class="text-caption text-gray-500">
-            请选择预约日期和时间（可自选任意时间，用于测试）。
+            时间将随机分配在 06:40-08:20，7:30-7:50 概率更高，可点击按钮重新随机。
           </div>
         </div>
         <VBtn variant="text" :loading="fetchingPoints" @click="loadMornSignPaper">
@@ -429,12 +480,12 @@ watch(
           />
         </VCol>
         <VCol cols="12" md="3">
-          <VTextField
-            v-model="reservationTime"
-            type="time"
-            label="预约时间"
-            variant="outlined"
-          />
+          <div class="text-body-2 text-gray-700 mb-2">预约时间（随机）</div>
+          <div class="flex items-center gap-2">
+            <VChip color="primary" variant="tonal">{{ reservationTimeDisplay }}</VChip>
+            <VBtn size="small" variant="text" @click="setRandomReservationTime">重新随机</VBtn>
+          </div>
+          <div class="text-caption text-gray-500 mt-1">包含秒，峰值集中 07:30-07:50</div>
         </VCol>
       </VRow>
       <VBtn
@@ -563,6 +614,28 @@ watch(
         </VCardText>
         <VCardActions class="justify-end">
           <VBtn variant="text" @click="redeemLinksDialog = false">关闭</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="featureWarningDialog" max-width="420" persistent>
+      <VCard>
+        <VCardTitle>提示</VCardTitle>
+        <VCardText>该功能仍在测试中，不要轻易下单</VCardText>
+        <VCardActions class="justify-end">
+          <VBtn color="primary" @click="featureWarningDialog = false">我知道了</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
+    <VDialog v-model="reservationNoteDialog" max-width="420">
+      <VCard>
+        <VCardTitle>温馨提示</VCardTitle>
+        <VCardText>
+          预约后退出龙猫app登录（直接删除后台就可以，在签到成功之前，尽量不要登录，但可以扫码登录本网站）
+        </VCardText>
+        <VCardActions class="justify-end">
+          <VBtn color="primary" @click="reservationNoteDialog = false">我知道了</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>

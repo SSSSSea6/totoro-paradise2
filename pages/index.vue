@@ -191,12 +191,6 @@ const goMornSign = () => {
     message.value = '请先扫码登录';
     return;
   }
-  const pwd = window.prompt('请输入访问早操签到的密码');
-  if (pwd !== '982108244Qq') {
-    snackbar.value = true;
-    message.value = '密码错误，无法进入';
-    return;
-  }
   router.push('/mornsign');
 };
 </script>
@@ -244,7 +238,7 @@ const goMornSign = () => {
         append-icon="i-mdi-calendar-check"
         @click="goMornSign"
       >
-        敬请期待
+        早操签到
       </VBtn>
     </div>
     <div v-if="!isLoggedIn" class="text-caption text-gray-500">
