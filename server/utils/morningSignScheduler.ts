@@ -292,8 +292,37 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
       console.error('[morning-scheduler] failed to update task status', updateError);
     }
 
-    if (status === 'success') success += 1;
-    else failed += 1;
+    if (status === 'success') {
+      success += 1;
+    } else {
+      failed += 1;
+      // 失败则补回消耗的次数
+      try {
+        const { data: creditRow, error: creditError } = await supabase
+          .from('user_credits')
+          .select('credits')
+          .eq('user_id', (task as MorningTaskRow).user_id)
+          .single();
+
+        if (creditError && creditError.code !== 'PGRST116') {
+          console.error('[morning-scheduler] refund fetch failed', creditError);
+        } else {
+          const currentCredits = creditRow?.credits ?? 0;
+          const { error: upsertError } = await supabase
+            .from('user_credits')
+            .upsert({
+              user_id: (task as MorningTaskRow).user_id,
+              credits: currentCredits + 1,
+              updated_at: new Date().toISOString(),
+            });
+          if (upsertError) {
+            console.error('[morning-scheduler] refund upsert failed', upsertError);
+          }
+        }
+      } catch (refundErr) {
+        console.error('[morning-scheduler] refund unexpected failure', refundErr);
+      }
+    }
   }
 
   return { processed: (tasks || []).length, success, failed };

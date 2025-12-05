@@ -550,7 +550,8 @@ watch(
             <td>{{ formatDateTime(rec.scheduled_time) }}</td>
             <td>{{ rec.status }}</td>
             <td class="max-w-80 whitespace-pre-wrap text-sm text-gray-600">
-              {{ rec.result_log || '无' }}
+              <template v-if="rec.status === 'failed'">未成功，已返还次数</template>
+              <template v-else>{{ rec.result_log || '无' }}</template>
             </td>
           </tr>
         </tbody>
