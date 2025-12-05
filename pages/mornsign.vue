@@ -373,7 +373,7 @@ watch(
   { immediate: true },
 );
 
-const randomRefreshDelayMs = () => 10 * 60 * 1000 + Math.random() * 20 * 60 * 1000;
+const randomRefreshDelayMs = () => 2 * 60 * 1000; // 调试期：固定 2 分钟刷新
 
 const clearRefreshTimer = () => {
   if (refreshTimer.value) {
@@ -385,14 +385,38 @@ const clearRefreshTimer = () => {
 const refreshTokenOnce = async () => {
   if (!hydratedSession.value?.token) return;
   try {
-    const refreshed = await TotoroApiWrapper.login({ token: hydratedSession.value.token });
-    const nextToken = refreshed?.token || hydratedSession.value.token;
-    const nextSession = normalizeSession({ ...session.value, ...refreshed, token: nextToken });
+    const code = (session.value as any)?.code || (hydratedSession.value as any)?.code || '';
+    let nextToken = hydratedSession.value.token;
+
+    if (code) {
+      try {
+        const lesseeServer = await TotoroApiWrapper.getLesseeServer(code);
+        if (lesseeServer?.token) {
+          nextToken = lesseeServer.token;
+        } else {
+          console.warn('[mornsign] refresh lessee server returned no token', lesseeServer);
+        }
+      } catch (lesseeErr) {
+        console.warn('[mornsign] refresh lessee server failed', lesseeErr);
+      }
+    }
+
+    const refreshed = await TotoroApiWrapper.login({ token: nextToken });
+    const nextSession = normalizeSession({
+      ...session.value,
+      ...refreshed,
+      token: nextToken,
+      code,
+    });
     session.value = nextSession as any;
-    const userId = refreshed?.stuNumber || hydratedSession.value.stuNumber;
+    const userId = nextSession.stuNumber || refreshed?.stuNumber || hydratedSession.value.stuNumber;
     if (userId && nextToken) {
       await syncPendingMorningTasks(userId, nextToken);
     }
+    console.info('[mornsign] token refreshed', {
+      stuNumber: userId,
+      token: nextToken,
+    });
   } catch (error) {
     console.warn('[mornsign] auto refresh token failed', error);
   }
