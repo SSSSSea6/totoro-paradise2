@@ -194,6 +194,30 @@ onUnmounted(() => {
 
 <template>
   <div class="p-4 space-y-4">
+    <div>
+      <p>请核对个人信息</p>
+      <VTable density="compact" class="mb-6 mt-4">
+        <tbody>
+          <tr>
+            <td>学校</td>
+            <td>{{ session.value?.campusName || '-' }}</td>
+          </tr>
+          <tr>
+            <td>学院</td>
+            <td>{{ session.value?.collegeName || '-' }}</td>
+          </tr>
+          <tr>
+            <td>学号</td>
+            <td>{{ session.value?.stuNumber || '-' }}</td>
+          </tr>
+          <tr>
+            <td>姓名</td>
+            <td>{{ session.value?.stuName || '-' }}</td>
+          </tr>
+        </tbody>
+      </VTable>
+    </div>
+
     <div class="flex flex-wrap items-end gap-3">
       <VSelect
         v-model="selectValue"
