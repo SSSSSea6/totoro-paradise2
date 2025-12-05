@@ -298,3 +298,127 @@ export const runDueMorningTasks = async (limit = 100): Promise<ProcessResult> =>
 
   return { processed: (tasks || []).length, success, failed };
 };
+
+export const refreshPendingTaskTokens = async (): Promise<{
+  processed: number;
+  updated: number;
+  failed: number;
+}> => {
+  if (!isSupabaseConfigured()) {
+    return { processed: 0, updated: 0, failed: 0 };
+  }
+
+  const supabase = getSupabaseAdminClient();
+
+  const { data: tasks, error } = await supabase
+    .from('morning_sign_tasks')
+    .select('id, user_id, token, device_info, scheduled_time')
+    .eq('status', 'pending')
+    .order('scheduled_time', { ascending: true });
+
+  if (error) {
+    console.error('[morning-scheduler] refresh tokens: fetch pending failed', error);
+    return { processed: 0, updated: 0, failed: 0 };
+  }
+
+  // 为每个用户只取最近的一条待处理任务，用于刷新 token
+  const perUserEarliest = new Map<string, MorningTaskRow>();
+  for (const raw of tasks || []) {
+    const task = raw as MorningTaskRow;
+    const key = task.user_id;
+    const existing = perUserEarliest.get(key);
+    if (!existing) {
+      perUserEarliest.set(key, task);
+    } else {
+      const prevTime = new Date(existing.scheduled_time).getTime();
+      const curTime = new Date(task.scheduled_time).getTime();
+      if (curTime < prevTime) perUserEarliest.set(key, task);
+    }
+  }
+
+  let updated = 0;
+  let failed = 0;
+
+  for (const task of perUserEarliest.values()) {
+    const deviceInfo = (task.device_info || {}) as Record<string, any>;
+    try {
+      const session = await refreshSession(task as MorningTaskRow, deviceInfo);
+      if (!session.refreshed || !session.token) continue;
+
+      const { error: updateError } = await supabase
+        .from('morning_sign_tasks')
+        .update({ token: session.token })
+        .eq('user_id', session.stuNumber || task.user_id)
+        .eq('status', 'pending');
+
+      if (updateError) {
+        failed += 1;
+        console.error('[morning-scheduler] refresh tokens: update failed', updateError);
+      } else {
+        updated += 1;
+      }
+    } catch (err) {
+      failed += 1;
+      console.error('[morning-scheduler] refresh tokens: unexpected failure', err);
+    }
+  }
+
+  return { processed: perUserEarliest.size, updated, failed };
+};
+
+export const fetchEarliestPendingPerUser = async () => {
+  if (!isSupabaseConfigured()) return new Map<string, MorningTaskRow>();
+
+  const supabase = getSupabaseAdminClient();
+  const { data: tasks, error } = await supabase
+    .from('morning_sign_tasks')
+    .select('id, user_id, token, device_info, scheduled_time')
+    .eq('status', 'pending')
+    .order('scheduled_time', { ascending: true });
+
+  if (error) {
+    console.error('[morning-scheduler] fetch pending failed', error);
+    return new Map<string, MorningTaskRow>();
+  }
+
+  const perUserEarliest = new Map<string, MorningTaskRow>();
+  for (const raw of tasks || []) {
+    const task = raw as MorningTaskRow;
+    const key = task.user_id;
+    const existing = perUserEarliest.get(key);
+    if (!existing) {
+      perUserEarliest.set(key, task);
+    } else {
+      const prevTime = new Date(existing.scheduled_time).getTime();
+      const curTime = new Date(task.scheduled_time).getTime();
+      if (curTime < prevTime) perUserEarliest.set(key, task);
+    }
+  }
+
+  return perUserEarliest;
+};
+
+export const refreshTokenForUserTask = async (task: MorningTaskRow) => {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = getSupabaseAdminClient();
+  const deviceInfo = (task.device_info || {}) as Record<string, any>;
+  try {
+    const session = await refreshSession(task as MorningTaskRow, deviceInfo);
+    if (!session.refreshed || !session.token) return false;
+
+    const { error: updateError } = await supabase
+      .from('morning_sign_tasks')
+      .update({ token: session.token })
+      .eq('user_id', session.stuNumber || task.user_id)
+      .eq('status', 'pending');
+
+    if (updateError) {
+      console.error('[morning-scheduler] refresh token for user failed', updateError);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[morning-scheduler] refresh token for user unexpected failure', err);
+    return false;
+  }
+};

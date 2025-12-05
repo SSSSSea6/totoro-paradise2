@@ -191,7 +191,7 @@ const fetchCredits = async () => {
       body: { action: 'get', userId: hydratedSession.value.stuNumber },
     });
     if (typeof res.credits === 'number') credits.value = res.credits;
-    if (res.message && res.success === false) notify(res.message);
+    if (res.success === false) notify('获取余额失败');
   } catch (error) {
     console.error('[mornsign] fetchCredits failed', error);
     notify('获取余额失败，请稍后重试');
@@ -269,11 +269,13 @@ const handleRedeem = async () => {
         code: redeemCode.value.trim(),
       },
     });
-    notify(res.message ?? '兑换完成');
     if (res.success) {
+      notify('兑换完成');
       credits.value = res.credits ?? credits.value;
       redeemDialog.value = false;
       redeemCode.value = '';
+    } else {
+      notify('兑换失败');
     }
   } catch (error) {
     console.error('[mornsign] redeem failed', error);
@@ -317,12 +319,14 @@ const handleReserve = async () => {
         },
       },
     });
-    notify(res.message ?? '预约完成');
     if (res.success) {
+      notify('预约完成');
       credits.value = Math.max(0, credits.value - 1);
       lastScheduledTime.value = res.scheduledTime || scheduledTime;
       await loadRecords();
       reservationNoteDialog.value = true;
+    } else {
+      notify('预约失败');
     }
   } catch (error) {
     console.error('[mornsign] reserve failed', error);

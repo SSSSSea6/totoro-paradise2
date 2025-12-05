@@ -1,4 +1,8 @@
-import { runDueMorningTasks } from '../utils/morningSignScheduler';
+import {
+  runDueMorningTasks,
+  fetchEarliestPendingPerUser,
+  refreshTokenForUserTask,
+} from '../utils/morningSignScheduler';
 import { isSupabaseConfigured } from '../utils/supabaseAdminClient';
 
 export default defineNitroPlugin((nitroApp) => {
@@ -14,7 +18,31 @@ export default defineNitroPlugin((nitroApp) => {
 
   const INTERVAL_MS = 5_000;
   const BATCH_LIMIT = 100;
+  const nextTokenRefreshInterval = () => 30 * 60 * 1000 + Math.random() * 10 * 60 * 1000; // 30-40min
   let isRunning = false;
+  let lastTokenRefresh = 0;
+  let currentTokenRefreshInterval = nextTokenRefreshInterval();
+  let tokenRefreshTimers: ReturnType<typeof setTimeout>[] = [];
+  let isPlanningRefresh = false;
+
+  const scheduleTokenRefreshWave = async () => {
+    tokenRefreshTimers.forEach((t) => clearTimeout(t));
+    tokenRefreshTimers = [];
+
+    const windowMs = currentTokenRefreshInterval;
+    const perUserEarliest = await fetchEarliestPendingPerUser();
+    if (perUserEarliest.size === 0) return;
+
+    for (const task of perUserEarliest.values()) {
+      const delay = Math.random() * windowMs;
+      const timer = setTimeout(() => {
+        refreshTokenForUserTask(task).catch((err) =>
+          console.error('[morning-scheduler] staggered refresh failed', err),
+        );
+      }, delay);
+      tokenRefreshTimers.push(timer);
+    }
+  };
 
   const tick = async () => {
     if (isRunning) return;
@@ -25,6 +53,15 @@ export default defineNitroPlugin((nitroApp) => {
         console.log(
           `[morning-scheduler] processed ${result.processed}, success: ${result.success}, failed: ${result.failed}`,
         );
+      }
+
+      const now = Date.now();
+      if (!isPlanningRefresh && now - lastTokenRefresh >= currentTokenRefreshInterval) {
+        isPlanningRefresh = true;
+        lastTokenRefresh = now;
+        await scheduleTokenRefreshWave();
+        currentTokenRefreshInterval = nextTokenRefreshInterval();
+        isPlanningRefresh = false;
       }
     } catch (error) {
       console.error('[morning-scheduler] execution failed', error);
