@@ -48,7 +48,9 @@ const notify = (msg: string) => {
 
 function getDefaultDate() {
   const today = new Date();
-  return today.toISOString().slice(0, 10);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  return tomorrow.toISOString().slice(0, 10);
 }
 
 function getDefaultTime() {
@@ -103,7 +105,11 @@ const setRandomReservationTime = () => {
 
 const computeScheduledTime = () => {
   if (!reservationTime.value) setRandomReservationTime();
-  const datePart = reservationDate.value || getDefaultDate();
+  const minDate = getDefaultDate();
+  const datePart =
+    !reservationDate.value || new Date(reservationDate.value) < new Date(minDate)
+      ? minDate
+      : reservationDate.value;
   const timePart = reservationTime.value || '06:40:00';
   const candidate = new Date(`${datePart}T${timePart}`);
   return candidate.toISOString();
@@ -352,6 +358,12 @@ const reservationTimeDisplay = computed(
 watch(
   () => reservationDate.value,
   () => {
+    const minDate = getDefaultDate();
+    const current = reservationDate.value || minDate;
+    if (new Date(current) < new Date(minDate)) {
+      reservationDate.value = minDate;
+      return;
+    }
     setRandomReservationTime();
   },
   { immediate: true },
@@ -489,6 +501,7 @@ watch(
             v-model="reservationDate"
             type="date"
             label="预约日期"
+            :min="getDefaultDate()"
             variant="outlined"
           />
         </VCol>
