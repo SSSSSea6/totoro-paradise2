@@ -1,14 +1,37 @@
 import { format, intervalToDuration } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 import type SunRunExercisesRequest from '../types/requestTypes/SunRunExercisesRequest';
-import calCalculator from '../utils/calCalculator';
 import generateMac from '../utils/generateMac';
 import normalRandom from '../utils/normalRandom';
 import timeUtil from '../utils/timeUtil';
 
+const BEIJING_OFFSET_MINUTES = 8 * 60;
+
+const offsetDiffMs = () => {
+  const currentOffsetMinutes = -new Date().getTimezoneOffset();
+  return (BEIJING_OFFSET_MINUTES - currentOffsetMinutes) * 60_000;
+};
+
+const parseCustomEndTime = (customEndTime?: string | Date) => {
+  if (!customEndTime) return null;
+  if (customEndTime instanceof Date) return customEndTime;
+
+  const normalized = customEndTime.trim().replace(' ', 'T');
+  if (!normalized) return null;
+
+  const withSeconds = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized)
+    ? `${normalized}:00`
+    : normalized;
+  const withZone = /([+-]\d{2}:?\d{2}|Z)$/i.test(withSeconds)
+    ? withSeconds
+    : `${withSeconds}+08:00`;
+
+  const parsed = new Date(withZone);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 /**
- * @param minTime 最短用时，以分钟计
- *  @param maxTime 最长用时，以分钟计
+ * @param minTime minimum duration in minutes
+ * @param maxTime maximum duration in minutes
  */
 const generateRunReq = async ({
   distance,
@@ -20,6 +43,7 @@ const generateRunReq = async ({
   phoneNumber,
   minTime,
   maxTime,
+  customEndTime,
 }: {
   distance: string;
   routeId: string;
@@ -30,6 +54,7 @@ const generateRunReq = async ({
   phoneNumber: string;
   minTime: string;
   maxTime: string;
+  customEndTime?: string | Date;
 }) => {
   const { minSecond, maxSecond } = {
     minSecond: Number(minTime) * 60,
@@ -39,23 +64,28 @@ const generateRunReq = async ({
   const waitSecond = Math.floor(
     normalRandom(minSecond + maxSecond / 2, (maxSecond - avgSecond) / 3),
   );
-  const startTime = new Date();
-  const endTime = new Date(Number(startTime) + waitSecond * 1000);
 
-  // 转为东八区时间用于上报（避免服务器 UTC 导致时间显示为上午）
-  const targetOffsetMinutes = 8 * 60; // Asia/Shanghai
-  const currentOffsetMinutes = -startTime.getTimezoneOffset(); // 当前环境的时区偏移（分钟）
-  const diffMinutes = targetOffsetMinutes - currentOffsetMinutes;
-  const localStart = new Date(startTime.getTime() + diffMinutes * 60_000);
-  const localEnd = new Date(endTime.getTime() + diffMinutes * 60_000);
+  const diffMs = offsetDiffMs();
+  const now = new Date();
+  const parsedCustomEnd = parseCustomEndTime(customEndTime);
 
-  // ← 修改：随机增加 0.01-0.15 km
-  const originalDistanceNum = Number(distance);  
-  const randomIncrement = Math.random() * 0.05 + 0.01;  
+  const defaultLocalStart = new Date(now.getTime() + diffMs);
+  const defaultLocalEnd = new Date(now.getTime() + waitSecond * 1000 + diffMs);
+
+  const localEnd = parsedCustomEnd
+    ? new Date(parsedCustomEnd.getTime() + diffMs)
+    : defaultLocalEnd;
+  const localStart = parsedCustomEnd
+    ? new Date(localEnd.getTime() - waitSecond * 1000)
+    : defaultLocalStart;
+
+  // Slight random distance bump (0.01~0.15km) to avoid exact repeats
+  const originalDistanceNum = Number(distance);
+  const randomIncrement = Math.random() * 0.05 + 0.01;
   const adjustedDistanceNum = originalDistanceNum + randomIncrement;
-  const adjustedDistance = adjustedDistanceNum.toFixed(2); 
+  const adjustedDistance = adjustedDistanceNum.toFixed(2);
 
-  const avgSpeed = (adjustedDistanceNum / (waitSecond / 3600)).toFixed(2);  
+  const avgSpeed = (adjustedDistanceNum / (waitSecond / 3600)).toFixed(2);
   const duration = intervalToDuration({ start: localStart, end: localEnd });
   const mac = await generateMac(stuNumber);
   const req: SunRunExercisesRequest = {
@@ -68,7 +98,7 @@ const generateRunReq = async ({
     flag: '1',
     headImage: '',
     ifLocalSubmit: '0',
-    km: adjustedDistance,  
+    km: adjustedDistance,
     mac,
     phoneInfo: '$CN11/iPhone15,4/17.4.1',
     phoneNumber: '',
@@ -87,7 +117,8 @@ const generateRunReq = async ({
     warnType: '',
     faceData: '',
   };
-  return { req, endTime, adjustedDistance };  
+  // endTime still uses the runtime duration so the UI progress bar stays reasonable
+  return { req, endTime: new Date(Number(now) + waitSecond * 1000), adjustedDistance };
 };
 
 export default generateRunReq;
