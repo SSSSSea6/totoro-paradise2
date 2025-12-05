@@ -35,6 +35,7 @@ const redeemCode = ref('');
 const redeemLinksDialog = ref(false);
 const windowMeta = ref<{ startTime?: string; endTime?: string; offsetRange?: string } | null>(null);
 const lastScheduledTime = ref('');
+const refreshTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
 const isLoggedIn = computed(() => Boolean(hydratedSession.value?.token));
 
@@ -67,6 +68,17 @@ const ensureLogin = () => {
     return false;
   }
   return true;
+};
+
+const syncPendingMorningTasks = async (userId: string, token: string) => {
+  try {
+    await $fetch('/api/mornsign/sync-token', {
+      method: 'POST',
+      body: { userId, token },
+    });
+  } catch (error) {
+    console.warn('[mornsign] sync token failed', error);
+  }
 };
 
 const displayName = computed(() => {
@@ -284,6 +296,41 @@ const loadRecords = async () => {
 const formatDateTime = (iso: string | undefined) =>
   iso ? new Date(iso).toLocaleString() : '';
 
+const randomRefreshDelayMs = () => 10 * 60 * 500 + Math.random() * 20 * 60 * 1000;
+
+const clearRefreshTimer = () => {
+  if (refreshTimer.value) {
+    clearTimeout(refreshTimer.value);
+    refreshTimer.value = null;
+  }
+};
+
+const refreshTokenOnce = async () => {
+  if (!hydratedSession.value?.token) return;
+  try {
+    const refreshed = await TotoroApiWrapper.login({ token: hydratedSession.value.token });
+    const nextToken = refreshed?.token || hydratedSession.value.token;
+    const nextSession = normalizeSession({ ...session.value, ...refreshed, token: nextToken });
+    session.value = nextSession as any;
+    const userId = refreshed?.stuNumber || hydratedSession.value.stuNumber;
+    if (userId && nextToken) {
+      await syncPendingMorningTasks(userId, nextToken);
+    }
+  } catch (error) {
+    console.warn('[mornsign] auto refresh token failed', error);
+  }
+};
+
+const scheduleTokenRefresh = () => {
+  clearRefreshTimer();
+  if (!hydratedSession.value?.token) return;
+  const delay = randomRefreshDelayMs();
+  refreshTimer.value = setTimeout(async () => {
+    await refreshTokenOnce();
+    scheduleTokenRefresh();
+  }, delay);
+};
+
 onMounted(() => {
   if (!isLoggedIn.value) {
     router.push('/login?redirect=/mornsign');
@@ -294,15 +341,22 @@ onMounted(() => {
   fetchCredits();
   loadMornSignPaper();
   loadRecords();
+  scheduleTokenRefresh();
+});
+
+onUnmounted(() => {
+  clearRefreshTimer();
 });
 
 watch(
   () => hydratedSession.value?.token,
   (val) => {
     if (!val) {
+      clearRefreshTimer();
       router.push('/login?redirect=/mornsign');
       return;
     }
+    scheduleTokenRefresh();
     hydrateSession();
     fetchCredits();
     loadMornSignPaper();
