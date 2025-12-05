@@ -16,9 +16,11 @@ export default defineNitroPlugin((nitroApp) => {
     return;
   }
 
-  const INTERVAL_MS = 5_000;
+  // 调试：降低调度频率，取消 5s tick，改为每 1 分钟一次
+  const INTERVAL_MS = 60_000;
   const BATCH_LIMIT = 100;
-  const nextTokenRefreshInterval = () => 30 * 60 * 1000 + Math.random() * 10 * 60 * 1000; // 30-40min
+  // 调试：token 刷新周期固定 1 分钟
+  const nextTokenRefreshInterval = () => 60 * 1000;
   let isRunning = false;
   let lastTokenRefresh = 0;
   let currentTokenRefreshInterval = nextTokenRefreshInterval();
@@ -33,6 +35,11 @@ export default defineNitroPlugin((nitroApp) => {
     const perUserEarliest = await fetchEarliestPendingPerUser();
     if (perUserEarliest.size === 0) return;
 
+    console.info('[morning-scheduler] planning token refresh wave', {
+      users: perUserEarliest.size,
+      windowMs,
+    });
+
     for (const task of perUserEarliest.values()) {
       const delay = Math.random() * windowMs;
       const timer = setTimeout(() => {
@@ -44,8 +51,7 @@ export default defineNitroPlugin((nitroApp) => {
     }
   };
 
-  const tick = async () => {
-    console.log('[scheduler] tick');
+  const runLoop = async () => {
     if (isRunning) return;
     isRunning = true;
     try {
@@ -71,7 +77,7 @@ export default defineNitroPlugin((nitroApp) => {
     }
   };
 
-  const interval = setInterval(tick, INTERVAL_MS);
+  const interval = setInterval(runLoop, INTERVAL_MS);
   nitroApp.hooks.hookOnce('close', () => clearInterval(interval));
-  tick();
+  runLoop();
 });

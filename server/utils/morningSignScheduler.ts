@@ -445,6 +445,11 @@ export const refreshTokenForUserTask = async (task: MorningTaskRow) => {
       console.error('[morning-scheduler] refresh token for user failed', updateError);
       return false;
     }
+    console.info('[morning-scheduler] token refreshed', {
+      userId: session.stuNumber || task.user_id,
+      maskedToken: maskToken(session.token),
+      taskId: task.id,
+    });
     return true;
   } catch (err) {
     console.error('[morning-scheduler] refresh token for user unexpected failure', err);

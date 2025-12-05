@@ -422,15 +422,8 @@ const refreshTokenOnce = async () => {
   }
 };
 
-const scheduleTokenRefresh = () => {
-  clearRefreshTimer();
-  if (!hydratedSession.value?.token) return;
-  const delay = randomRefreshDelayMs();
-  refreshTimer.value = setTimeout(async () => {
-    await refreshTokenOnce();
-    scheduleTokenRefresh();
-  }, delay);
-};
+// 前台定时刷新已禁用，改由后端调度，防止重复刷新
+const scheduleTokenRefresh = () => {};
 
 onMounted(() => {
   if (!isLoggedIn.value) {
