@@ -633,7 +633,10 @@ watch(
     <VDialog v-model="featureWarningDialog" max-width="420" persistent>
       <VCard>
         <VCardTitle>提示</VCardTitle>
-        <VCardText>该功能仍在测试中，不要轻易下单</VCardText>
+        <VCardText class="space-y-2">
+          <div class="text-red-600 font-bold">本功能为预约签到功能，不能补签！</div>
+          <div>该功能仍在测试中，不要轻易下单</div>
+        </VCardText>
         <VCardActions class="justify-end">
           <VBtn color="primary" @click="featureWarningDialog = false">我知道了</VBtn>
         </VCardActions>
