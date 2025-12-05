@@ -107,12 +107,29 @@ const refreshSession = async (
     refreshed: false,
   };
 
+  const code = deviceInfo.code || deviceInfo.scanCode || deviceInfo.qrCode || '';
+  let candidateToken = task.token;
+
+  // 优先用 code 换最新 token
+  if (code) {
+    try {
+      const lessee = await TotoroApiWrapper.getLesseeServer(code as string);
+      if (lessee?.token) {
+        candidateToken = lessee.token;
+      } else {
+        console.warn('[morning-scheduler] getLesseeServer returned no token', lessee);
+      }
+    } catch (e) {
+      console.warn('[morning-scheduler] getLesseeServer failed', e);
+    }
+  }
+
   try {
-    const loginRes = (await TotoroApiWrapper.login({ token: task.token })) as any;
+    const loginRes = (await TotoroApiWrapper.login({ token: candidateToken })) as any;
     const ok = loginRes?.status === '00' && loginRes?.code === '0';
     if (!ok) return base;
     return {
-      token: loginRes.token || base.token,
+      token: loginRes.token || candidateToken || base.token,
       campusId: loginRes.campusId || base.campusId,
       schoolId: loginRes.schoolId || base.schoolId,
       stuNumber: loginRes.stuNumber || base.stuNumber,
@@ -448,6 +465,8 @@ export const refreshTokenForUserTask = async (task: MorningTaskRow) => {
     console.info('[morning-scheduler] token refreshed', {
       userId: session.stuNumber || task.user_id,
       maskedToken: maskToken(session.token),
+      oldToken: maskToken(task.token),
+      changed: session.token !== task.token,
       taskId: task.id,
     });
     return true;

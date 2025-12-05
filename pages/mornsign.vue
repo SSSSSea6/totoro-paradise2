@@ -315,6 +315,7 @@ const handleReserve = async () => {
           campusId: hydratedSession.value.campusId,
           schoolId: hydratedSession.value.schoolId,
           phoneNumber: hydratedSession.value.phoneNumber,
+          code: (hydratedSession.value as any)?.code || (session.value as any)?.code || '',
           signType: (signPoints.value.find((p) => p.pointId === target.pointId) as any)?.signType,
         },
       },
