@@ -45,6 +45,7 @@ export default defineNitroPlugin((nitroApp) => {
   };
 
   const tick = async () => {
+    console.log('[scheduler] tick');
     if (isRunning) return;
     isRunning = true;
     try {
