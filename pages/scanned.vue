@@ -13,6 +13,10 @@ const selectValue = ref('');
 const customDate = ref('');
 const customPeriod = ref<'AM' | 'PM'>('AM');
 const showBackfill = ref(false);
+const credits = ref(0);
+const loadingCredits = ref(false);
+const redeemDialog = ref(false);
+const redeemCode = ref('');
 const calendarMonthOffset = ref(0);
 const completedDates = ref<string[]>([]);
 const isSubmitting = ref(false);
@@ -222,6 +226,49 @@ const selectDay = (iso: string, disabled: boolean) => {
   customDate.value = iso;
 };
 
+const fetchCredits = async () => {
+  if (!session.value?.stuNumber) return;
+  loadingCredits.value = true;
+  try {
+    const res = await $fetch<{ success?: boolean; credits?: number; message?: string }>(
+      '/api/backfill/credits',
+      {
+        method: 'POST',
+        body: { action: 'get', userId: session.value.stuNumber },
+      },
+    );
+    if (typeof res.credits === 'number') credits.value = res.credits;
+  } catch (error) {
+    console.warn('[backfill] fetchCredits failed', error);
+  } finally {
+    loadingCredits.value = false;
+  }
+};
+
+const handleRedeem = async () => {
+  if (!session.value?.stuNumber) return;
+  if (!redeemCode.value.trim()) return;
+  loadingCredits.value = true;
+  try {
+    const res = await $fetch<{ success?: boolean; credits?: number; message?: string }>(
+      '/api/backfill/credits',
+      {
+        method: 'POST',
+        body: { action: 'redeem', userId: session.value.stuNumber, code: redeemCode.value.trim() },
+      },
+    );
+    if (res.success && typeof res.credits === 'number') {
+      credits.value = res.credits;
+      redeemDialog.value = false;
+      redeemCode.value = '';
+    }
+  } catch (error) {
+    console.warn('[backfill] redeem failed', error);
+  } finally {
+    loadingCredits.value = false;
+  }
+};
+
 const loadCompletedDates = async () => {
   if (!session.value?.token || !sunrunPaper.value?.startDate || !sunrunPaper.value?.endDate) return;
   try {
@@ -321,6 +368,7 @@ const init = async () => {
     const fromQuery = typeof route.query.route === 'string' ? route.query.route : '';
     selectValue.value = fromQuery || data?.runPointList?.[0]?.pointId || '';
     await loadCompletedDates();
+    await fetchCredits();
   } catch (error) {
     statusMessage.value = '获取路线失败';
     resultLog.value = (error as Error).message;
@@ -388,6 +436,16 @@ onUnmounted(() => {
     <div class="space-y-3">
       <VCheckbox v-model="showBackfill" label="我要补跑（选择日期后走补交）" />
       <div v-if="showBackfill" class="space-y-3">
+        <VCard class="p-3 space-y-2" variant="tonal">
+          <div class="flex items-center gap-3">
+            <div class="font-medium">次数余额：</div>
+            <div class="text-2xl font-bold text-green-600">{{ credits }}</div>
+            <VBtn size="small" variant="text" :loading="loadingCredits" @click="fetchCredits"
+              >刷新</VBtn
+            >
+            <VBtn size="small" color="primary" @click="redeemDialog = true">添加次数</VBtn>
+          </div>
+        </VCard>
         <div class="flex items-center justify-between max-w-2xl">
           <div class="font-medium">选择日期（仅本学期）</div>
           <div class="space-x-2">
@@ -439,6 +497,25 @@ onUnmounted(() => {
         />
       </div>
     </div>
+
+    <VDialog v-model="redeemDialog" max-width="420">
+      <VCard title="充值次数">
+        <VCardText>
+          <VTextField
+            v-model="redeemCode"
+            label="兑换码"
+            hint="输入早操同款兑换码"
+            persistent-hint
+            variant="outlined"
+          />
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
+          <VBtn color="primary" :loading="loadingCredits" @click="handleRedeem">兑换</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <VBtn
       block
