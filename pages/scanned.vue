@@ -49,10 +49,16 @@ const endDateObj = computed(() => {
 });
 
 const monthToRender = computed(() => {
-  const base = startDateObj.value ? new Date(startDateObj.value) : new Date();
-  base.setMonth(base.getMonth() + calendarMonthOffset.value);
-  base.setDate(1);
-  return base;
+  const today = new Date();
+  const start = startDateObj.value;
+  const end = endDateObj.value;
+  let base = today;
+  if (start && today < start) base = start;
+  if (end && today > end) base = end;
+  const monthBase = new Date(base);
+  monthBase.setDate(1);
+  monthBase.setMonth(monthBase.getMonth() + calendarMonthOffset.value);
+  return monthBase;
 });
 const monthStart = computed(() => new Date(monthToRender.value));
 const prevDisabled = computed(() => {
@@ -66,6 +72,10 @@ const nextDisabled = computed(() => {
   const next = new Date(monthToRender.value);
   next.setMonth(next.getMonth() + 1);
   return next > endDateObj.value;
+});
+const monthLabel = computed(() => {
+  const m = monthToRender.value;
+  return `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
 });
 
 const calendarDays = computed(() => {
@@ -387,6 +397,7 @@ onUnmounted(() => {
           >
         </div>
       </div>
+      <div class="text-sm text-gray-600 mb-2">当前月份：{{ monthLabel }}</div>
       <div class="max-w-2xl border rounded-md p-3">
         <div class="grid grid-cols-7 text-center text-caption text-gray-500 mb-2">
           <div>一</div>
