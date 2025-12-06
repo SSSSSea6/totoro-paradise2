@@ -49,12 +49,11 @@ const endDateObj = computed(() => {
 });
 
 const monthToRender = computed(() => {
-  const today = new Date();
   const start = startDateObj.value;
   const end = endDateObj.value;
-  let base = today;
-  if (start && today < start) base = start;
-  if (end && today > end) base = end;
+  // 初始月优先用学期开始月，超出学期则回落到可选范围
+  let base = start ?? new Date();
+  if (end && base > end) base = end;
   const monthBase = new Date(base);
   monthBase.setDate(1);
   monthBase.setMonth(monthBase.getMonth() + calendarMonthOffset.value);
