@@ -445,54 +445,6 @@ onUnmounted(() => {
             >
             <VBtn size="small" color="primary" @click="redeemDialog = true">添加次数</VBtn>
           </div>
-          <div class="text-caption text-gray-600">购买链接：</div>
-          <div class="flex flex-wrap gap-2">
-            <VBtn
-              size="small"
-              variant="tonal"
-              color="primary"
-              href="https://mbd.pub/o/bread/YZWZmZdrbA=="
-              target="_blank"
-            >
-              获取 1 次
-            </VBtn>
-            <VBtn
-              size="small"
-              variant="tonal"
-              color="primary"
-              href="https://mbd.pub/o/bread/YZWZmZdrbQ=="
-              target="_blank"
-            >
-              获取 5 次
-            </VBtn>
-            <VBtn
-              size="small"
-              variant="tonal"
-              color="primary"
-              href="https://mbd.pub/o/bread/YZWZmZdsZA=="
-              target="_blank"
-            >
-              获取 10 次
-            </VBtn>
-            <VBtn
-              size="small"
-              variant="tonal"
-              color="primary"
-              href="https://mbd.pub/o/bread/YZWZmZdsZQ=="
-              target="_blank"
-            >
-              获取 20 次
-            </VBtn>
-            <VBtn
-              size="small"
-              variant="tonal"
-              color="primary"
-              href="https://mbd.pub/o/bread/YZWZmZdsZg=="
-              target="_blank"
-            >
-              获取 30 次
-            </VBtn>
-          </div>
         </VCard>
         <div class="flex items-center justify-between max-w-2xl">
           <div class="font-medium">选择日期（仅本学期）</div>
