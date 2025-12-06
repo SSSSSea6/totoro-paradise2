@@ -546,21 +546,67 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <VDialog v-model="redeemDialog" max-width="420">
-      <VCard title="充值次数">
-        <VCardText>
-          <VTextField
-            v-model="redeemCode"
-            label="兑换码"
-            hint="输入早操同款兑换码"
-            persistent-hint
-            variant="outlined"
-          />
-        </VCardText>
-        <VCardActions>
-          <VSpacer />
-          <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
-          <VBtn color="primary" :loading="loadingCredits" @click="handleRedeem">兑换</VBtn>
+      <VDialog v-model="redeemDialog" max-width="420">
+        <VCard title="充值次数">
+          <VCardText>
+            <VTextField
+              v-model="redeemCode"
+              label="兑换码"
+              variant="outlined"
+            />
+            <div class="text-caption text-gray-600 mt-3 mb-2">购买链接：</div>
+            <div class="flex flex-wrap gap-2">
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                href="https://mbd.pub/o/bread/YZWZmZdrbA=="
+                target="_blank"
+              >
+                获取 1 次
+              </VBtn>
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                href="https://mbd.pub/o/bread/YZWZmZdrbQ=="
+                target="_blank"
+              >
+                获取 5 次
+              </VBtn>
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                href="https://mbd.pub/o/bread/YZWZmZdsZA=="
+                target="_blank"
+              >
+                获取 10 次
+              </VBtn>
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                href="https://mbd.pub/o/bread/YZWZmZdsZQ=="
+                target="_blank"
+              >
+                获取 20 次
+              </VBtn>
+              <VBtn
+                size="small"
+                variant="tonal"
+                color="primary"
+                href="https://mbd.pub/o/bread/YZWZmZdsZg=="
+                target="_blank"
+              >
+                获取 30 次
+              </VBtn>
+            </div>
+          </VCardText>
+          <VCardActions>
+            <VSpacer />
+            <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
+            <VBtn color="primary" :loading="loadingCredits" @click="handleRedeem">兑换</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>

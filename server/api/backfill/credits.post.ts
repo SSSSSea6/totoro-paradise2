@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: codeData, error: codeError } = await supabase
       .from('backfill_redeem_codes')
-      .select('*')
+      .select('code, amount, is_used, used_by, used_at')
       .eq('code', code)
       .eq('is_used', false)
       .single();
@@ -84,7 +84,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const currentCredits = userData?.credits ?? INITIAL_BONUS;
-    const newCredits = currentCredits + codeData.amount;
+    const newCredits = currentCredits + (codeData.amount ?? 1);
 
     const { error: upsertError } = await supabase
       .from('backfill_run_credits')
@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
       return { success: false, message: '兑换失败，请稍后重试' };
     }
 
-    return { success: true, message: `成功兑换 ${codeData.amount} 次`, credits: newCredits };
+    return { success: true, message: `成功兑换 ${codeData.amount ?? 1} 次`, credits: newCredits };
   }
 
   return { success: false, message: '未知操作' };
