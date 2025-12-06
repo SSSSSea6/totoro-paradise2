@@ -446,7 +446,7 @@ onUnmounted(() => {
     </div>
 
     <div class="space-y-3">
-      <VCheckbox v-model="showBackfill" label="我要补跑（选择日期后走补交）" />
+      <VCheckbox v-model="showBackfill" label="选择日期（不选默认当前时间）" />
       <div v-if="showBackfill" class="space-y-3">
         <VCard class="p-3 space-y-2" variant="tonal">
           <div class="flex items-center gap-3">
