@@ -346,7 +346,7 @@ const submitJobToQueue = async () => {
 
     if (response.status === 202 && data.success) {
       taskId.value = data.taskId;
-      statusMessage.value = '任务已提交，可直接离开，稍后查看进度';
+      statusMessage.value = '';
       handleStatusUpdate({ status: 'PENDING', result_log: '' });
       subscribeToTaskUpdates(data.taskId);
       if (queueCount.value !== null) queueCount.value = Math.max(0, queueCount.value - 1);
@@ -598,7 +598,7 @@ onUnmounted(() => {
       任务已提交，可直接离开，稍后查看进度
     </VAlert>
 
-    <VAlert v-if="statusMessage" type="info" variant="tonal" class="mt-2">
+    <VAlert v-if="statusMessage && !submitted" type="info" variant="tonal" class="mt-2">
       <div>{{ statusMessage }}</div>
       <div v-if="resultLog" class="text-caption mt-1">详情：{{ resultLog }}</div>
     </VAlert>
