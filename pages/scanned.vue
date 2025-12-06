@@ -52,30 +52,37 @@ const endDateObj = computed(() => {
   const e = sunrunPaper.value?.endDate;
   return e ? new Date(`${e}T23:59:59+08:00`) : null;
 });
+const startMonthFloor = computed(() => {
+  if (!startDateObj.value) return null;
+  return new Date(startDateObj.value.getFullYear(), startDateObj.value.getMonth(), 1);
+});
+const endMonthFloor = computed(() => {
+  if (!endDateObj.value) return null;
+  return new Date(endDateObj.value.getFullYear(), endDateObj.value.getMonth(), 1);
+});
 
 const monthToRender = computed(() => {
   const start = startDateObj.value;
   const end = endDateObj.value;
   // 初始月优先用学期开始月，超出学期则回落到可选范围
-  let base = start ?? new Date();
-  if (end && base > end) base = end;
+  let base = start ? new Date(start.getFullYear(), start.getMonth(), 1) : new Date();
+  if (end && base > end) base = new Date(end.getFullYear(), end.getMonth(), 1);
   const monthBase = new Date(base);
-  monthBase.setDate(1);
   monthBase.setMonth(monthBase.getMonth() + calendarMonthOffset.value);
   return monthBase;
 });
 const monthStart = computed(() => new Date(monthToRender.value));
 const prevDisabled = computed(() => {
-  if (!startDateObj.value) return false;
+  if (!startMonthFloor.value) return false;
   const prev = new Date(monthToRender.value);
   prev.setMonth(prev.getMonth() - 1);
-  return prev < startDateObj.value;
+  return prev < startMonthFloor.value;
 });
 const nextDisabled = computed(() => {
-  if (!endDateObj.value) return false;
+  if (!endMonthFloor.value) return false;
   const next = new Date(monthToRender.value);
   next.setMonth(next.getMonth() + 1);
-  return next > endDateObj.value;
+  return next > endMonthFloor.value;
 });
 const monthLabel = computed(() => {
   const m = monthToRender.value;
