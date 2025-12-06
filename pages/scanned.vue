@@ -17,6 +17,7 @@ const credits = ref(0);
 const loadingCredits = ref(false);
 const redeemDialog = ref(false);
 const redeemCode = ref('');
+const submitted = ref(false);
 const calendarMonthOffset = ref(0);
 const completedDates = ref<string[]>([]);
 const isSubmitting = ref(false);
@@ -333,6 +334,7 @@ const submitJobToQueue = async () => {
   statusMessage.value = '正在提交到队列...';
   resultLog.value = '';
   taskId.value = null;
+  submitted.value = false;
 
   try {
     const response = await fetch('/api/submitTask', {
@@ -348,12 +350,15 @@ const submitJobToQueue = async () => {
       handleStatusUpdate({ status: 'PENDING', result_log: '' });
       subscribeToTaskUpdates(data.taskId);
       if (queueCount.value !== null) queueCount.value = Math.max(0, queueCount.value - 1);
+      submitted.value = true;
     } else {
       statusMessage.value = `提交失败: ${data.error || '未知错误'}`;
+      submitted.value = false;
     }
   } catch (error) {
     statusMessage.value = '提交失败';
     resultLog.value = (error as Error).message;
+    submitted.value = false;
   } finally {
     isSubmitting.value = false;
   }
@@ -452,6 +457,9 @@ onUnmounted(() => {
             >
             <VBtn size="small" color="primary" @click="redeemDialog = true">添加次数</VBtn>
           </div>
+          <div class="text-caption text-orange-700">
+            选择补跑后提交将预扣 1 次（任务失败会返还）
+          </div>
         </VCard>
         <div class="flex items-center justify-between max-w-2xl">
           <div class="font-medium">选择日期（仅本学期）</div>
@@ -505,72 +513,73 @@ onUnmounted(() => {
       </div>
     </div>
 
-      <VDialog v-model="redeemDialog" max-width="420">
-        <VCard title="充值次数">
-          <VCardText>
-            <VTextField
-              v-model="redeemCode"
-              label="兑换码"
-              variant="outlined"
-            />
-            <div class="text-caption text-gray-600 mt-3 mb-2">购买链接：</div>
-            <div class="flex flex-wrap gap-2">
-              <VBtn
-                size="small"
-                variant="tonal"
-                color="primary"
-                href="https://mbd.pub/o/bread/YZWZmZdrbA=="
-                target="_blank"
-              >
-                获取 1 次
-              </VBtn>
-              <VBtn
-                size="small"
-                variant="tonal"
-                color="primary"
-                href="https://mbd.pub/o/bread/YZWZmZdrbQ=="
-                target="_blank"
-              >
-                获取 5 次
-              </VBtn>
-              <VBtn
-                size="small"
-                variant="tonal"
-                color="primary"
-                href="https://mbd.pub/o/bread/YZWZmZdsZA=="
-                target="_blank"
-              >
-                获取 10 次
-              </VBtn>
-              <VBtn
-                size="small"
-                variant="tonal"
-                color="primary"
-                href="https://mbd.pub/o/bread/YZWZmZdsZQ=="
-                target="_blank"
-              >
-                获取 20 次
-              </VBtn>
-              <VBtn
-                size="small"
-                variant="tonal"
-                color="primary"
-                href="https://mbd.pub/o/bread/YZWZmZdsZg=="
-                target="_blank"
-              >
-                获取 30 次
-              </VBtn>
-            </div>
-          </VCardText>
-          <VCardActions>
-            <VSpacer />
-            <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
-            <VBtn color="primary" :loading="loadingCredits" @click="handleRedeem">兑换</VBtn>
+    <VDialog v-model="redeemDialog" max-width="420">
+      <VCard title="充值次数">
+        <VCardText>
+          <VTextField
+            v-model="redeemCode"
+            label="兑换码"
+            variant="outlined"
+          />
+          <div class="text-caption text-gray-600 mt-3 mb-2">购买链接：</div>
+          <div class="flex flex-wrap gap-2">
+            <VBtn
+              size="small"
+              variant="tonal"
+              color="primary"
+              href="https://mbd.pub/o/bread/YZWZmZdrbA=="
+              target="_blank"
+            >
+              获取 1 次
+            </VBtn>
+            <VBtn
+              size="small"
+              variant="tonal"
+              color="primary"
+              href="https://mbd.pub/o/bread/YZWZmZdrbQ=="
+              target="_blank"
+            >
+              获取 5 次
+            </VBtn>
+            <VBtn
+              size="small"
+              variant="tonal"
+              color="primary"
+              href="https://mbd.pub/o/bread/YZWZmZdsZA=="
+              target="_blank"
+            >
+              获取 10 次
+            </VBtn>
+            <VBtn
+              size="small"
+              variant="tonal"
+              color="primary"
+              href="https://mbd.pub/o/bread/YZWZmZdsZQ=="
+              target="_blank"
+            >
+              获取 20 次
+            </VBtn>
+            <VBtn
+              size="small"
+              variant="tonal"
+              color="primary"
+              href="https://mbd.pub/o/bread/YZWZmZdsZg=="
+              target="_blank"
+            >
+              获取 30 次
+            </VBtn>
+          </div>
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="redeemDialog = false">取消</VBtn>
+          <VBtn color="primary" :loading="loadingCredits" @click="handleRedeem">兑换</VBtn>
         </VCardActions>
       </VCard>
     </VDialog>
 
     <VBtn
+      v-if="!submitted"
       block
       color="primary"
       size="large"
@@ -580,6 +589,14 @@ onUnmounted(() => {
     >
       提交到队列
     </VBtn>
+    <VAlert
+      v-else
+      type="success"
+      variant="tonal"
+      class="mt-2"
+    >
+      任务已提交，可直接离开，稍后查看进度
+    </VAlert>
 
     <VAlert v-if="statusMessage" type="info" variant="tonal" class="mt-2">
       <div>{{ statusMessage }}</div>
