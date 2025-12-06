@@ -10,6 +10,7 @@ import type GetSunRunArchDetailRequest from '../types/requestTypes/GetSunRunArch
 import type GetSunRunArchRequest from '../types/requestTypes/GetSunRunArchRequest';
 import type SunRunExercisesDetailRequest from '../types/requestTypes/SunRunExercisesDetailRequest';
 import type SunRunExercisesRequest from '../types/requestTypes/SunRunExercisesRequest';
+import type SunRunSportRequest from '../types/requestTypes/SunRunSportRequest';
 import type UpdateAppVersionRequest from '../types/requestTypes/UpdateAppVersionRequest';
 import type GetAppAdResponse from '../types/responseTypes/GetAppAdResponse';
 import type GetAppFrontPageResponse from '../types/responseTypes/GetAppFrontPageResponse';
@@ -28,6 +29,7 @@ import type GetMornSignArchDetailResponse from '../types/responseTypes/GetMornSi
 import type LoginResponse from '../types/responseTypes/LoginResponse';
 import type SunRunExercisesDetailResponse from '../types/responseTypes/SunRunExercisesDetailResponse';
 import type SunRunExercisesResponse from '../types/responseTypes/SunRunExercisesResponse';
+import type SunRunSportResponse from '../types/responseTypes/SunRunSportResponse';
 import type SubmitMorningExercisesResponse from '../types/responseTypes/SubmitMorningExercisesResponse';
 import type UpdateAppVersionResponse from '../types/responseTypes/UpdateAppVersionResponse';
 import encryptRequestContent from '../utils/encryptRequestContent';
@@ -254,6 +256,12 @@ const TotoroApiWrapper = {
         body: encryptRequestContent(req),
       })
       .json();
+  },
+
+  async getSunRunSport(req: SunRunSportRequest): Promise<SunRunSportResponse> {
+    return this.client
+      .post('sunrun/getSunrunSport', { body: encryptRequestContent(req) })
+      .json<SunRunSportResponse>();
   },
 
   async getMornSignPaper(req: MorningTaskRequest): Promise<GetMornSignPaperResponse> {

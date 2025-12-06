@@ -10,7 +10,10 @@ const route = useRoute();
 const hydratedSession = computed(() => normalizeSession(session.value || {}));
 
 const selectValue = ref('');
-const customEndTime = ref('');
+const customDate = ref('');
+const customPeriod = ref<'AM' | 'PM'>('AM');
+const calendarMonthOffset = ref(0);
+const completedDates = ref<string[]>([]);
 const isSubmitting = ref(false);
 const statusMessage = ref('');
 const resultLog = ref('');
@@ -25,6 +28,89 @@ const target = computed(() =>
   sunrunPaper.value?.runPointList?.find((r: any) => r.pointId === selectValue.value),
 );
 const routeList = computed(() => sunrunPaper.value?.runPointList || []);
+const formatDateOnly = (date: Date) => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+const customDateMin = computed(() => {
+  const start = sunrunPaper.value?.startDate;
+  if (!start) return '';
+  return formatDateOnly(new Date(`${start}T00:00`));
+});
+const customDateMax = computed(() => formatDateOnly(new Date()));
+const todayStr = computed(() => formatDateOnly(new Date()));
+const startDateObj = computed(() => {
+  const s = sunrunPaper.value?.startDate;
+  return s ? new Date(`${s}T00:00:00+08:00`) : null;
+});
+const endDateObj = computed(() => {
+  const e = sunrunPaper.value?.endDate;
+  return e ? new Date(`${e}T23:59:59+08:00`) : null;
+});
+
+const monthToRender = computed(() => {
+  const base = startDateObj.value ? new Date(startDateObj.value) : new Date();
+  base.setMonth(base.getMonth() + calendarMonthOffset.value);
+  base.setDate(1);
+  return base;
+});
+const monthStart = computed(() => new Date(monthToRender.value));
+const prevDisabled = computed(() => {
+  if (!startDateObj.value) return false;
+  const prev = new Date(monthToRender.value);
+  prev.setMonth(prev.getMonth() - 1);
+  return prev < startDateObj.value;
+});
+const nextDisabled = computed(() => {
+  if (!endDateObj.value) return false;
+  const next = new Date(monthToRender.value);
+  next.setMonth(next.getMonth() + 1);
+  return next > endDateObj.value;
+});
+
+const calendarDays = computed(() => {
+  const start = startDateObj.value;
+  const end = endDateObj.value;
+  if (!start || !end) return [];
+  const days: Array<{
+    date: Date;
+    label: string;
+    iso: string;
+    disabled: boolean;
+    selected: boolean;
+  }> = [];
+  const monthStart = new Date(monthToRender.value);
+  const firstWeekday = monthStart.getDay() || 7;
+  // pad previous month days
+  for (let i = 1; i < firstWeekday; i += 1) {
+    days.push({
+      date: new Date(0),
+      label: '',
+      iso: '',
+      disabled: true,
+      selected: false,
+    });
+  }
+  const cursor = new Date(monthStart);
+  while (cursor <= end) {
+    const iso = formatDateOnly(cursor);
+    const disabled =
+      cursor < start ||
+      cursor > end ||
+      iso > todayStr.value ||
+      completedDates.value.includes(iso);
+    days.push({
+      date: new Date(cursor),
+      label: String(cursor.getDate()),
+      iso,
+      disabled,
+      selected: iso === customDate.value,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+    if (cursor.getDate() === 1) break; // next month reached
+  }
+  return days;
+});
 
 const displayCampus = computed(
   () =>
@@ -121,6 +207,31 @@ const randomSelect = () => {
   selectValue.value = list[idx]!.pointId;
 };
 
+const selectDay = (iso: string, disabled: boolean) => {
+  if (disabled || !iso) return;
+  customDate.value = iso;
+};
+
+const loadCompletedDates = async () => {
+  if (!session.value?.token || !sunrunPaper.value?.startDate || !sunrunPaper.value?.endDate) return;
+  try {
+    const response = await fetch('/api/run/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session: { stuNumber: session.value.stuNumber, token: session.value.token },
+        startDate: sunrunPaper.value.startDate,
+        endDate: sunrunPaper.value.endDate,
+      }),
+    });
+    const data = await response.json();
+    completedDates.value = Array.isArray(data?.dates) ? data.dates : [];
+  } catch (error) {
+    console.warn('[history] load failed', error);
+    completedDates.value = [];
+  }
+};
+
 const buildJobPayload = () => {
   if (!target.value) throw new Error('未选择路线');
   return {
@@ -130,7 +241,9 @@ const buildJobPayload = () => {
     minTime: sunrunPaper.value?.minTime,
     maxTime: sunrunPaper.value?.maxTime,
     runPoint: target.value,
-    customEndTime: customEndTime.value || null,
+    customDate: customDate.value || null,
+    customPeriod: customPeriod.value || null,
+    startDate: sunrunPaper.value?.startDate || null,
     session: {
       campusId: session.value.campusId,
       schoolId: session.value.schoolId,
@@ -197,6 +310,7 @@ const init = async () => {
     sunrunPaper.value = data;
     const fromQuery = typeof route.query.route === 'string' ? route.query.route : '';
     selectValue.value = fromQuery || data?.runPointList?.[0]?.pointId || '';
+    await loadCompletedDates();
   } catch (error) {
     statusMessage.value = '获取路线失败';
     resultLog.value = (error as Error).message;
@@ -261,16 +375,56 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <VTextField
-      v-model="customEndTime"
-      type="datetime-local"
-      label="自定义完成时间（东八区，可选）"
-      hint="留空则使用当前时间随机值，示例：2024-12-05 07:30"
-      persistent-hint
-      clearable
-      variant="outlined"
-      class="max-w-80"
-    />
+    <div class="space-y-3">
+      <div class="flex items-center justify-between max-w-2xl">
+        <div class="font-medium">选择日期（仅本学期）</div>
+        <div class="space-x-2">
+          <VBtn size="small" variant="text" :disabled="prevDisabled" @click="calendarMonthOffset--"
+            >上一月</VBtn
+          >
+          <VBtn size="small" variant="text" :disabled="nextDisabled" @click="calendarMonthOffset++"
+            >下一月</VBtn
+          >
+        </div>
+      </div>
+      <div class="max-w-2xl border rounded-md p-3">
+        <div class="grid grid-cols-7 text-center text-caption text-gray-500 mb-2">
+          <div>一</div>
+          <div>二</div>
+          <div>三</div>
+          <div>四</div>
+          <div>五</div>
+          <div>六</div>
+          <div>日</div>
+        </div>
+        <div class="grid grid-cols-7 gap-1">
+          <button
+            v-for="day in calendarDays"
+            :key="day.iso + day.label"
+            class="h-10 rounded text-sm border flex items-center justify-center"
+            :class="[
+              day.disabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white',
+              day.selected ? 'border-primary text-primary font-semibold' : 'border-gray-200',
+            ]"
+            :disabled="day.disabled || !day.iso"
+            @click="selectDay(day.iso, day.disabled)"
+          >
+            {{ day.label }}
+          </button>
+        </div>
+      </div>
+      <VSelect
+        v-model="customPeriod"
+        :items="[
+          { title: '上午（07:30-11:30）', value: 'AM' },
+          { title: '下午（13:30-21:30）', value: 'PM' },
+        ]"
+        label="时间段"
+        variant="outlined"
+        density="comfortable"
+        class="max-w-80"
+      />
+    </div>
 
     <VBtn
       block
