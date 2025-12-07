@@ -261,7 +261,7 @@ watch(
               color="primary"
               variant="tonal"
               size="small"
-              href="https://mbd.pub/o/bread/YZWZl59rZA=="
+              href="https://afdian.com/item/49906c22d35911f08cc252540025c377"
               target="_blank"
             >
               1 公里
@@ -270,7 +270,7 @@ watch(
               color="primary"
               variant="tonal"
               size="small"
-              href="https://mbd.pub/o/bread/YZWZl5tyaA=="
+              href="https://afdian.com/item/921ce0fad35a11f09ba052540025c377"
               target="_blank"
             >
               2 公里
@@ -279,7 +279,7 @@ watch(
               color="primary"
               variant="tonal"
               size="small"
-              href="https://mbd.pub/o/bread/YZWZlp9qbA=="
+              href="https://afdian.com/item/ca26396ad35a11f0bcf552540025c377"
               target="_blank"
             >
               5 公里
@@ -288,7 +288,7 @@ watch(
               color="primary"
               variant="tonal"
               size="small"
-              href="https://mbd.pub/o/bread/YZWZlpxpaw=="
+              href="https://afdian.com/item/9a543132d35b11f0b6cc52540025c377"
               target="_blank"
             >
               10 公里
@@ -297,7 +297,7 @@ watch(
               color="primary"
               variant="tonal"
               size="small"
-              href="https://mbd.pub/o/bread/YZWYmpdvZg=="
+              href="https://afdian.com/item/de3d7502d35b11f0b1c152540025c377"
               target="_blank"
             >
               30 公里
@@ -306,7 +306,7 @@ watch(
               color="primary"
               variant="tonal"
               size="small"
-              href="https://mbd.pub/o/bread/YZWZmJZxaQ=="
+              href="https://afdian.com/item/339ed2cad35c11f0bdf25254001e7c00"
               target="_blank"
             >
               3.2 公里
