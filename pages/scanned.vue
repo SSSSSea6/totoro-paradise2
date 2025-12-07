@@ -38,6 +38,12 @@ const formatDateOnly = (date: Date) => {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
+const getShanghaiDateStr = () => {
+  const now = new Date();
+  const offsetMs = (8 * 60 + now.getTimezoneOffset()) * 60 * 1000;
+  const shanghaiNow = new Date(now.getTime() + offsetMs);
+  return formatDateOnly(shanghaiNow);
+};
 const customDateMin = computed(() => {
   const start = sunrunPaper.value?.startDate;
   if (!start) return '';
@@ -234,6 +240,32 @@ const selectDay = (iso: string, disabled: boolean) => {
   customDate.value = iso;
 };
 
+const hasTaskOnDate = async (targetDate: string) => {
+  if (!supabaseEnabled.value || !supabase) return false;
+  if (!session.value?.stuNumber) return false;
+  const query = supabase
+    .from('Tasks')
+    .select('id', { count: 'exact' })
+    .in('status', ['PENDING', 'PROCESSING', 'SUCCESS'])
+    .contains('user_data', { session: { stuNumber: session.value.stuNumber } })
+    .limit(1);
+
+  if (showBackfill.value && customDate.value) {
+    query.eq('user_data->>customDate', targetDate);
+  } else {
+    const dayStart = `${targetDate}T00:00:00+08:00`;
+    const dayEnd = `${targetDate}T23:59:59.999+08:00`;
+    query.gte('created_at', new Date(dayStart).toISOString()).lte('created_at', new Date(dayEnd).toISOString());
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.warn('[queue] duplicate check failed', error);
+    return false;
+  }
+  return Array.isArray(data) && data.length > 0;
+};
+
 const fetchCredits = async () => {
   if (!session.value?.stuNumber) return;
   loadingCredits.value = true;
@@ -328,6 +360,18 @@ const submitJobToQueue = async () => {
   if (!target.value) {
     statusMessage.value = '请先选择路线';
     return;
+  }
+
+  const targetDate = showBackfill.value && customDate.value ? customDate.value : getShanghaiDateStr();
+  try {
+    const duplicated = await hasTaskOnDate(targetDate);
+    if (duplicated) {
+      statusMessage.value = '这一天已经跑过了，请勿重复提交';
+      submitted.value = false;
+      return;
+    }
+  } catch (dupErr) {
+    console.warn('[queue] duplicate check unexpected failure', dupErr);
   }
 
   isSubmitting.value = true;
