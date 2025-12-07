@@ -49,43 +49,43 @@ window.global = window;
         style="pointer-events: none"
       >
         <div
-          class="backdrop-blur bg-white/90 rounded-3xl shadow-lg border border-white/60 p-2 flex flex-col sm:flex-row gap-2 sm:items-center"
+          class="backdrop-blur bg-white/90 rounded-3xl shadow-lg border border-white/60 px-2 py-3 sm:px-3 sm:py-2 flex flex-col sm:flex-row gap-3 sm:gap-2 sm:items-center"
           style="pointer-events: auto"
         >
           <VBtn
-            height="52"
-            width="52"
-            class="p-0 rounded-2xl overflow-hidden"
+            height="44"
+            width="44"
+            class="p-0 rounded-2xl overflow-hidden social-btn"
             variant="flat"
             :ripple="false"
             href="https://xhslink.com/m/2lvmVCPsKhY"
             target="_blank"
             rel="noopener"
           >
-            <VImg :src="xhsIcon" cover height="52" width="52" />
+            <VImg :src="xhsIcon" cover class="social-img" />
           </VBtn>
           <VBtn
-            height="52"
-            width="52"
-            class="p-0 rounded-2xl overflow-hidden"
+            height="44"
+            width="44"
+            class="p-0 rounded-2xl overflow-hidden social-btn"
             variant="flat"
             :ripple="false"
             href="https://b23.tv/he2YHvs"
             target="_blank"
             rel="noopener"
           >
-            <VImg :src="biliIcon" cover height="52" width="52" />
+            <VImg :src="biliIcon" cover class="social-img" />
           </VBtn>
           <VBtn
-            height="52"
-            width="52"
-            class="p-0 rounded-2xl overflow-hidden"
+            height="44"
+            width="44"
+            class="p-0 rounded-2xl overflow-hidden social-btn"
             variant="flat"
             color="primary"
             :ripple="false"
             @click="qqDialog = true"
           >
-            <VImg :src="qqIcon" cover height="52" width="52" />
+            <VImg :src="qqIcon" cover class="social-img" />
           </VBtn>
         </div>
       </div>
@@ -110,3 +110,24 @@ window.global = window;
     </VDialog>
   </VApp>
 </template>
+
+<style scoped>
+.social-btn {
+  height: 44px !important;
+  width: 44px !important;
+}
+.social-img {
+  height: 44px;
+  width: 44px;
+}
+@media (min-width: 640px) {
+  .social-btn {
+    height: 52px !important;
+    width: 52px !important;
+  }
+  .social-img {
+    height: 52px;
+    width: 52px;
+  }
+}
+</style>
