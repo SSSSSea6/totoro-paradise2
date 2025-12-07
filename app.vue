@@ -76,7 +76,6 @@ window.global = window;
           width="44"
           class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
           variant="flat"
-          color="primary"
           :ripple="false"
           @click="qqDialog = true"
           style="pointer-events: auto"
@@ -110,6 +109,9 @@ window.global = window;
 .social-btn {
   height: 44px !important;
   width: 44px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
 }
 .social-img {
   height: 44px;
@@ -129,6 +131,7 @@ window.global = window;
   .social-btn {
     height: 52px !important;
     width: 52px !important;
+    border-radius: 18px !important;
   }
   .social-img {
     height: 52px;
