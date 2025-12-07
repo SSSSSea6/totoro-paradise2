@@ -243,20 +243,17 @@ const selectDay = (iso: string, disabled: boolean) => {
 const hasTaskOnDate = async (targetDate: string) => {
   if (!supabaseEnabled.value || !supabase) return false;
   if (!session.value?.stuNumber) return false;
+  const dayStart = `${targetDate}T00:00:00+08:00`;
+  const dayEnd = `${targetDate}T23:59:59.999+08:00`;
   const query = supabase
     .from('Tasks')
     .select('id', { count: 'exact' })
     .in('status', ['PENDING', 'PROCESSING', 'SUCCESS'])
     .contains('user_data', { session: { stuNumber: session.value.stuNumber } })
+    .or(
+      `user_data->>customDate.eq.${targetDate},and(created_at.gte.${new Date(dayStart).toISOString()},created_at.lte.${new Date(dayEnd).toISOString()})`,
+    )
     .limit(1);
-
-  if (showBackfill.value && customDate.value) {
-    query.eq('user_data->>customDate', targetDate);
-  } else {
-    const dayStart = `${targetDate}T00:00:00+08:00`;
-    const dayEnd = `${targetDate}T23:59:59.999+08:00`;
-    query.gte('created_at', new Date(dayStart).toISOString()).lte('created_at', new Date(dayEnd).toISOString());
-  }
 
   const { data, error } = await query;
   if (error) {
