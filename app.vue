@@ -37,43 +37,6 @@ window.global = window;
         </NuxtLink>
       </VAppBarTitle>
       <template #append>
-        <div class="flex items-center gap-2 mr-2">
-          <VBtn
-            height="44"
-            width="44"
-            class="p-0 rounded-xl overflow-hidden"
-            variant="flat"
-            :ripple="false"
-            href="https://xhslink.com/m/2lvmVCPsKhY"
-            target="_blank"
-            rel="noopener"
-          >
-            <VImg :src="xhsIcon" cover height="44" width="44" />
-          </VBtn>
-          <VBtn
-            height="44"
-            width="44"
-            class="p-0 rounded-xl overflow-hidden"
-            variant="flat"
-            :ripple="false"
-            href="https://b23.tv/he2YHvs"
-            target="_blank"
-            rel="noopener"
-          >
-            <VImg :src="biliIcon" cover height="44" width="44" />
-          </VBtn>
-          <VBtn
-            height="44"
-            width="44"
-            class="p-0 rounded-2xl overflow-hidden"
-            variant="flat"
-            color="primary"
-            :ripple="false"
-            @click="qqDialog = true"
-          >
-            <VImg :src="qqIcon" cover height="44" width="44" />
-          </VBtn>
-        </div>
         <VAppBarNavIcon
           v-ripple icon="i-mdi-github" href="https://github.com/BeiyanYunyi/totoro-paradise"
           rel="noreferrer noopener" target="_blank"
@@ -81,6 +44,51 @@ window.global = window;
       </template>
     </VAppBar>
     <VMain>
+      <div
+        class="fixed z-30 left-3 top-[76px] sm:left-6 sm:top-[100px]"
+        style="pointer-events: none"
+      >
+        <div
+          class="backdrop-blur bg-white/90 rounded-3xl shadow-lg border border-white/60 p-2 flex flex-col sm:flex-row gap-2 sm:items-center"
+          style="pointer-events: auto"
+        >
+          <VBtn
+            height="52"
+            width="52"
+            class="p-0 rounded-2xl overflow-hidden"
+            variant="flat"
+            :ripple="false"
+            href="https://xhslink.com/m/2lvmVCPsKhY"
+            target="_blank"
+            rel="noopener"
+          >
+            <VImg :src="xhsIcon" cover height="52" width="52" />
+          </VBtn>
+          <VBtn
+            height="52"
+            width="52"
+            class="p-0 rounded-2xl overflow-hidden"
+            variant="flat"
+            :ripple="false"
+            href="https://b23.tv/he2YHvs"
+            target="_blank"
+            rel="noopener"
+          >
+            <VImg :src="biliIcon" cover height="52" width="52" />
+          </VBtn>
+          <VBtn
+            height="52"
+            width="52"
+            class="p-0 rounded-2xl overflow-hidden"
+            variant="flat"
+            color="primary"
+            :ripple="false"
+            @click="qqDialog = true"
+          >
+            <VImg :src="qqIcon" cover height="52" width="52" />
+          </VBtn>
+        </div>
+      </div>
       <div class="p-4">
         <NuxtPage />
         <!--p class="mt-4 text-xs">
