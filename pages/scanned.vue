@@ -49,8 +49,8 @@ const customDateMin = computed(() => {
   if (!start) return '';
   return formatDateOnly(new Date(`${start}T00:00`));
 });
-const customDateMax = computed(() => formatDateOnly(new Date()));
-const todayStr = computed(() => formatDateOnly(new Date()));
+const customDateMax = computed(() => getShanghaiDateStr());
+const todayStr = computed(() => getShanghaiDateStr());
 const startDateObj = computed(() => {
   const s = sunrunPaper.value?.startDate;
   return s ? new Date(`${s}T00:00:00+08:00`) : null;
@@ -125,7 +125,7 @@ const calendarDays = computed(() => {
     const disabled =
       cursor < start ||
       cursor > end ||
-      iso > todayStr.value ||
+      iso >= todayStr.value ||
       completedDates.value.includes(iso);
     days.push({
       date: new Date(cursor),
