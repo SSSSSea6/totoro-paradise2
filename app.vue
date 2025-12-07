@@ -44,50 +44,45 @@ window.global = window;
       </template>
     </VAppBar>
     <VMain>
-      <div
-        class="fixed z-30 left-3 top-[76px] sm:left-6 sm:top-[100px]"
-        style="pointer-events: none"
-      >
-        <div
-          class="backdrop-blur bg-white/90 rounded-3xl shadow-lg border border-white/60 px-2 py-3 sm:px-3 sm:py-2 flex flex-col sm:flex-row gap-3 sm:gap-2 sm:items-center"
+      <div class="social-stack" style="pointer-events: none">
+        <VBtn
+          height="44"
+          width="44"
+          class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
+          variant="flat"
+          :ripple="false"
+          href="https://xhslink.com/m/2lvmVCPsKhY"
+          target="_blank"
+          rel="noopener"
           style="pointer-events: auto"
         >
-          <VBtn
-            height="44"
-            width="44"
-            class="p-0 rounded-2xl overflow-hidden social-btn"
-            variant="flat"
-            :ripple="false"
-            href="https://xhslink.com/m/2lvmVCPsKhY"
-            target="_blank"
-            rel="noopener"
-          >
-            <VImg :src="xhsIcon" cover class="social-img" />
-          </VBtn>
-          <VBtn
-            height="44"
-            width="44"
-            class="p-0 rounded-2xl overflow-hidden social-btn"
-            variant="flat"
-            :ripple="false"
-            href="https://b23.tv/he2YHvs"
-            target="_blank"
-            rel="noopener"
-          >
-            <VImg :src="biliIcon" cover class="social-img" />
-          </VBtn>
-          <VBtn
-            height="44"
-            width="44"
-            class="p-0 rounded-2xl overflow-hidden social-btn"
-            variant="flat"
-            color="primary"
-            :ripple="false"
-            @click="qqDialog = true"
-          >
-            <VImg :src="qqIcon" cover class="social-img" />
-          </VBtn>
-        </div>
+          <VImg :src="xhsIcon" cover class="social-img" />
+        </VBtn>
+        <VBtn
+          height="44"
+          width="44"
+          class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
+          variant="flat"
+          :ripple="false"
+          href="https://b23.tv/he2YHvs"
+          target="_blank"
+          rel="noopener"
+          style="pointer-events: auto"
+        >
+          <VImg :src="biliIcon" cover class="social-img" />
+        </VBtn>
+        <VBtn
+          height="44"
+          width="44"
+          class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
+          variant="flat"
+          color="primary"
+          :ripple="false"
+          @click="qqDialog = true"
+          style="pointer-events: auto"
+        >
+          <VImg :src="qqIcon" cover class="social-img" />
+        </VBtn>
       </div>
       <div class="p-4">
         <NuxtPage />
@@ -120,6 +115,16 @@ window.global = window;
   height: 44px;
   width: 44px;
 }
+/* 左上角悬浮栈，移动竖排，桌面横排，互相分离 */
+.social-stack {
+  position: fixed;
+  z-index: 30;
+  left: 12px;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 @media (min-width: 640px) {
   .social-btn {
     height: 52px !important;
@@ -128,6 +133,12 @@ window.global = window;
   .social-img {
     height: 52px;
     width: 52px;
+  }
+  .social-stack {
+    flex-direction: row;
+    gap: 12px;
+    left: 24px;
+    top: 96px;
   }
 }
 </style>
