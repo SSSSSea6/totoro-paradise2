@@ -306,6 +306,47 @@ const handleRedeem = async () => {
   }
 };
 
+const reserveBackfillCredit = async (): Promise<{ ok: boolean; message?: string }> => {
+  if (!session.value?.stuNumber) {
+    return { ok: false, message: '请先登录' };
+  }
+  try {
+    const res = await $fetch<{ success?: boolean; credits?: number; message?: string }>(
+      '/api/backfill/credits',
+      {
+        method: 'POST',
+        body: { action: 'consume', userId: session.value.stuNumber },
+      },
+    );
+    if (res.success && typeof res.credits === 'number') {
+      credits.value = res.credits;
+      return { ok: true };
+    }
+    return { ok: false, message: res.message || '补跑次数不足' };
+  } catch (error) {
+    console.warn('[backfill] reserve failed', error);
+    return { ok: false, message: '补跑次数扣减失败' };
+  }
+};
+
+const refundReservedCredit = async () => {
+  if (!session.value?.stuNumber) return;
+  try {
+    const res = await $fetch<{ success?: boolean; credits?: number; message?: string }>(
+      '/api/backfill/credits',
+      {
+        method: 'POST',
+        body: { action: 'refund', userId: session.value.stuNumber },
+      },
+    );
+    if (typeof res.credits === 'number') {
+      credits.value = res.credits;
+    }
+  } catch (error) {
+    console.warn('[backfill] refund failed', error);
+  }
+};
+
 const loadCompletedDates = async () => {
   if (!session.value?.token || !sunrunPaper.value?.startDate || !sunrunPaper.value?.endDate) return;
   try {
@@ -326,7 +367,7 @@ const loadCompletedDates = async () => {
   }
 };
 
-const buildJobPayload = () => {
+const buildJobPayload = (reservedCredit = false) => {
   if (!target.value) throw new Error('未选择路线');
   return {
     routeId: target.value.pointId,
@@ -345,6 +386,7 @@ const buildJobPayload = () => {
       token: session.value.token,
       phoneNumber: session.value.phoneNumber,
     },
+    reservedCredit,
     queuedAt: new Date().toISOString(),
   };
 };
@@ -360,6 +402,9 @@ const submitJobToQueue = async () => {
   }
 
   const targetDate = showBackfill.value && customDate.value ? customDate.value : getShanghaiDateStr();
+  let reservedCredit = false;
+  let reserveNeedsRefund = false;
+
   try {
     const duplicated = await hasTaskOnDate(targetDate);
     if (duplicated) {
@@ -371,6 +416,16 @@ const submitJobToQueue = async () => {
     console.warn('[queue] duplicate check unexpected failure', dupErr);
   }
 
+  if (showBackfill.value && customDate.value && session.value?.stuNumber) {
+    const reserveResult = await reserveBackfillCredit();
+    if (!reserveResult.ok) {
+      statusMessage.value = reserveResult.message || '补跑次数不足';
+      return;
+    }
+    reservedCredit = true;
+    reserveNeedsRefund = true;
+  }
+
   isSubmitting.value = true;
   statusMessage.value = '正在提交到队列...';
   resultLog.value = '';
@@ -378,10 +433,11 @@ const submitJobToQueue = async () => {
   submitted.value = false;
 
   try {
+    const jobPayload = buildJobPayload(reservedCredit);
     const response = await fetch('/api/submitTask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildJobPayload()),
+      body: JSON.stringify(jobPayload),
     });
     const data = await response.json();
 
@@ -394,14 +450,25 @@ const submitJobToQueue = async () => {
       submitted.value = true;
     } else {
       statusMessage.value = `提交失败: ${data.error || '未知错误'}`;
+      if (reserveNeedsRefund) {
+        await refundReservedCredit();
+        reserveNeedsRefund = false;
+      }
       submitted.value = false;
     }
   } catch (error) {
     statusMessage.value = '提交失败';
     resultLog.value = (error as Error).message;
     submitted.value = false;
+    if (reserveNeedsRefund) {
+      await refundReservedCredit();
+      reserveNeedsRefund = false;
+    }
   } finally {
     isSubmitting.value = false;
+    if (reservedCredit) {
+      await fetchCredits();
+    }
   }
 };
 

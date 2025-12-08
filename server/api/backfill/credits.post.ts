@@ -15,6 +15,21 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = getSupabaseAdminClient();
+  const ensureInitialRow = async () => {
+    const { data: inserted, error: upsertError } = await supabase
+      .from('backfill_run_credits')
+      .upsert({
+        user_id: userId,
+        credits: INITIAL_BONUS,
+        updated_at: new Date().toISOString(),
+      })
+      .select('credits')
+      .single();
+    if (upsertError) {
+      return { error: upsertError, credits: 0 };
+    }
+    return { error: null, credits: inserted?.credits ?? INITIAL_BONUS };
+  };
 
   if (action === 'get') {
     const { data, error } = await supabase
@@ -46,6 +61,71 @@ export default defineEventHandler(async (event) => {
     }
 
     return { success: true, credits: data?.credits ?? 0 };
+  }
+
+  if (action === 'consume') {
+    let { data, error } = await supabase
+      .from('backfill_run_credits')
+      .select('credits')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      return { success: false, message: error.message };
+    }
+
+    if (error?.code === 'PGRST116' || !data) {
+      const init = await ensureInitialRow();
+      if (init.error) {
+        return { success: false, message: init.error.message };
+      }
+      data = { credits: init.credits };
+    }
+
+    const currentCredits = data?.credits ?? 0;
+    if (currentCredits < 1) {
+      return { success: false, message: '补跑次数不足' };
+    }
+
+    const nextCredits = currentCredits - 1;
+    const { error: updateError } = await supabase
+      .from('backfill_run_credits')
+      .update({ credits: nextCredits, updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    if (updateError) {
+      return { success: false, message: updateError.message };
+    }
+
+    return { success: true, credits: nextCredits };
+  }
+
+  if (action === 'refund') {
+    const { data, error } = await supabase
+      .from('backfill_run_credits')
+      .select('credits')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      return { success: false, message: error.message };
+    }
+
+    const currentCredits = data?.credits ?? 0;
+    const nextCredits = currentCredits + 1;
+    const { error: upsertError } = await supabase
+      .from('backfill_run_credits')
+      .upsert({
+        user_id: userId,
+        credits: nextCredits,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (upsertError) {
+      return { success: false, message: upsertError.message };
+    }
+
+    return { success: true, credits: nextCredits };
   }
 
   if (action === 'redeem') {
