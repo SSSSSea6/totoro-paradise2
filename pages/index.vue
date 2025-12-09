@@ -260,16 +260,6 @@ const goMornSign = () => {
       >
         自由跑
       </VBtn>
-      <VBtn
-        color="blue"
-        block
-        height="56"
-        :disabled="!isLoggedIn"
-        append-icon="i-mdi-calendar-check"
-        @click="goMornSign"
-      >
-        早操签到
-      </VBtn>
     </div>
     <div v-if="!isLoggedIn" class="text-caption text-gray-500">
       未登录时入口按钮会置灰，请先扫码等待自动登录。
