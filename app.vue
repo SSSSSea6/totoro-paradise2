@@ -46,8 +46,8 @@ window.global = window;
     <VMain>
       <div class="social-stack" style="pointer-events: none">
         <VBtn
-          height="44"
-          width="44"
+          height="36"
+          width="36"
           class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
           variant="flat"
           :ripple="false"
@@ -59,8 +59,8 @@ window.global = window;
           <VImg :src="xhsIcon" cover class="social-img" />
         </VBtn>
         <VBtn
-          height="44"
-          width="44"
+          height="36"
+          width="36"
           class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
           variant="flat"
           :ripple="false"
@@ -72,8 +72,8 @@ window.global = window;
           <VImg :src="biliIcon" cover class="social-img" />
         </VBtn>
         <VBtn
-          height="44"
-          width="44"
+          height="36"
+          width="36"
           class="p-0 rounded-2xl overflow-hidden social-btn shadow-md"
           variant="flat"
           :ripple="false"
@@ -107,21 +107,21 @@ window.global = window;
 
 <style scoped>
 .social-btn {
-  height: 44px !important;
-  width: 44px !important;
+  height: 36px !important;
+  width: 36px !important;
   min-width: 0 !important;
   padding: 0 !important;
   border-radius: 16px !important;
 }
 .social-img {
-  height: 44px;
-  width: 44px;
+  height: 36px;
+  width: 36px;
 }
-/* 左上角悬浮栈，移动竖排，桌面横排，互相分离 */
+/* 右上角悬浮栈，移动&桌面均竖排 */
 .social-stack {
   position: fixed;
   z-index: 30;
-  left: 12px;
+  right: 12px;
   top: 76px;
   display: flex;
   flex-direction: column;
@@ -129,19 +129,13 @@ window.global = window;
 }
 @media (min-width: 640px) {
   .social-btn {
-    height: 52px !important;
-    width: 52px !important;
+    height: 44px !important;
+    width: 44px !important;
     border-radius: 18px !important;
   }
   .social-img {
-    height: 52px;
-    width: 52px;
-  }
-  .social-stack {
-    flex-direction: row;
-    gap: 12px;
-    left: 24px;
-    top: 96px;
+    height: 44px;
+    width: 44px;
   }
 }
 </style>
