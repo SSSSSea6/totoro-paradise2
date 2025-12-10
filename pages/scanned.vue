@@ -401,6 +401,11 @@ const submitJobToQueue = async () => {
     return;
   }
 
+  isSubmitting.value = true;
+  resultLog.value = '';
+  taskId.value = null;
+  submitted.value = false;
+
   const targetDate = showBackfill.value && customDate.value ? customDate.value : getShanghaiDateStr();
   let reservedCredit = false;
   let reserveNeedsRefund = false;
@@ -409,28 +414,28 @@ const submitJobToQueue = async () => {
     const duplicated = await hasTaskOnDate(targetDate);
     if (duplicated) {
       statusMessage.value = '这一天已经跑过了，请勿重复提交';
+      isSubmitting.value = false;
       submitted.value = false;
       return;
     }
   } catch (dupErr) {
     console.warn('[queue] duplicate check unexpected failure', dupErr);
+    isSubmitting.value = false;
+    return;
   }
 
   if (showBackfill.value && customDate.value && session.value?.stuNumber) {
     const reserveResult = await reserveBackfillCredit();
     if (!reserveResult.ok) {
       statusMessage.value = reserveResult.message || '补跑次数不足';
+       isSubmitting.value = false;
       return;
     }
     reservedCredit = true;
     reserveNeedsRefund = true;
   }
 
-  isSubmitting.value = true;
   statusMessage.value = '正在提交到队列...';
-  resultLog.value = '';
-  taskId.value = null;
-  submitted.value = false;
 
   try {
     const jobPayload = buildJobPayload(reservedCredit);
